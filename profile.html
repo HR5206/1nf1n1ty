@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SastraDaily • Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><img src="./assets/icon.svg" alt="SastraDaily" width="28" height="28"/><span>SastraDaily</span></div>
+    <nav class="nav">
+      <a class="nav-btn" href="./feed.html">Feed</a>
+      <a class="nav-btn" href="./profile.html">Profile</a>
+      <a class="nav-btn" href="./chat.html">Chat</a>
+    </nav>
+    <div class="actions"><button id="themeToggle" title="Toggle theme" class="btn">🌓</button><div id="authActions"><button id="loginBtn" class="btn gradient" onclick="location.href='./index.html'">Login</button><button id="logoutBtn" class="btn" hidden>Logout</button></div></div>
+  </header>
+  <main id="app" class="app-root">
+    <!-- Profile container -->
+    <section class="profile card" style="display:flex;flex-direction:column;gap:12px">
+      <div class="row" style="gap:16px;align-items:center">
+        <img id="profileAvatar" class="avatar" alt="Profile picture" />
+        <div class="row" style="gap:8px">
+          <input type="file" id="avatarInput" accept="image/*" hidden />
+          <button class="btn gradient" id="changeAvatar">Change Avatar</button>
+        </div>
+      </div>
+      <div>
+        <h2 id="profileUsername" style="margin:0 0 4px">—</h2>
+        <div id="profileEmail" class="muted" style="margin:0 0 4px">—</div>
+        <p id="profileBio" class="muted" style="margin:0">—</p>
+      </div>
+      <div class="row stats"><span><strong id="statPosts">0</strong> posts</span></div>
+      <div class="row" style="flex-wrap:wrap;gap:8px">
+        <input type="text" id="usernameInput" placeholder="Update username" maxlength="30" style="min-width:220px;flex:1" />
+        <input type="text" id="bioInput" placeholder="Update your bio" maxlength="160" style="min-width:260px;flex:2" />
+        <button class="btn gradient" id="saveProfile">Save</button>
+      </div>
+    </section>
+
+    <!-- Posts container -->
+    <section class="card" style="margin-top:12px">
+      <h3 style="margin-top:0">Your posts</h3>
+      <div id="profileGrid" class="grid"></div>
+    </section>
+  </main>
+  <script type="module" src="./js/shared.js"></script>
+  <script type="module" src="./js/profile.js"></script>
+</body>
+</html>

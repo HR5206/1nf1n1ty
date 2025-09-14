@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SastraDaily • Feed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><img src="./assets/icon.svg" alt="SastraDaily" width="28" height="28"/><span>SastraDaily</span></div>
+    <nav class="nav">
+      <a class="nav-btn" href="./feed.html">Feed</a>
+      <a class="nav-btn" href="./profile.html">Profile</a>
+      <a class="nav-btn" href="./chat.html">Chat</a>
+    </nav>
+    <div class="actions"><button id="themeToggle" title="Toggle theme" class="btn">🌓</button><div id="authActions"><button id="loginBtn" class="btn gradient" onclick="location.href='./index.html'">Login</button><button id="logoutBtn" class="btn" hidden>Logout</button></div></div>
+  </header>
+  <main id="app" class="app-root">
+    <div class="feed-layout">
+      <aside class="sidebar sidebar-sticky">
+        <div id="createPost" class="card uploader" autocomplete="off">
+          <h3 class="muted" style="margin:0 0 6px 0;">Create post</h3>
+          <div id="dropzone" class="dropzone" tabindex="0">
+            <input type="file" id="postImage" accept="image/*" aria-label="Upload image" hidden />
+            <div class="dz-instructions"><strong>Drag & drop</strong> an image here, or <button class="btn gradient" id="browseImage" type="button">Browse</button></div>
+            <img id="previewImage" alt="preview" class="hidden" />
+          </div>
+          <div class="uploader-meta">
+            <textarea id="postCaption" rows="3" placeholder="Write a caption..." maxlength="200" aria-label="Caption"></textarea>
+            <div class="row space-between"><small class="muted"><span id="captionCount">0</span>/200</small><div class="row"><progress id="uploadProgress" value="0" max="100" class="hidden"></progress><button class="btn gradient" id="postSubmit" type="button">Share</button></div></div>
+          </div>
+        </div>
+      </aside>
+      <section class="feed-main"><ul id="feedList" class="feed"></ul></section>
+    </div>
+  </main>
+  <dialog id="likesModal"><div class="card" style="min-width:280px;max-width:420px"><h3 style="margin-top:0">Likes</h3><ul id="likesList" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px"></ul><div class="row" style="justify-content:flex-end;margin-top:10px"><button id="closeLikes" class="btn">Close</button></div></div></dialog>
+  <script type="module" src="./js/shared.js"></script>
+  <script type="module" src="./js/feed.js"></script>
+</body>
+</html>

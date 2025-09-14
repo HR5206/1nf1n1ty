@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SastraDaily • Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><img src="./assets/icon.svg" alt="SastraDaily" width="28" height="28"/><span>SastraDaily</span></div>
+    <nav class="nav">
+      <a class="nav-btn" href="./feed.html">Feed</a>
+      <a class="nav-btn" href="./profile.html">Profile</a>
+      <a class="nav-btn" href="./chat.html">Chat</a>
+    </nav>
+    <div class="actions"><button id="themeToggle" title="Toggle theme" class="btn">🌓</button><div id="authActions"><button id="loginBtn" class="btn gradient" onclick="location.href='./index.html'">Login</button><button id="logoutBtn" class="btn" hidden>Logout</button></div></div>
+  </header>
+  <main id="app" class="app-root">
+    <div class="chat-layout">
+      <aside class="chat-sidebar card">
+        <div class="sidebar-header row"><h3>Your messages</h3><button class="btn gradient" id="newChat">New</button></div>
+        <ul id="friendsList" class="friends-list"></ul>
+      </aside>
+      <div class="chat card chat-pane">
+        <div id="chatHeader" class="chat-header muted">Select a conversation</div>
+        <ul id="chatList" class="chat-list"></ul>
+        <form id="chatForm" class="row chat-composer"><input type="text" id="chatInput" placeholder="Message..." autocomplete="off" /><button class="btn gradient" id="chatSend">Send</button></form>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="./js/shared.js"></script>
+  <script type="module" src="./js/chat.js"></script>
+</body>
+</html>

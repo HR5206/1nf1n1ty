@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <title>SastraDaily</title>
+  <meta name="description" content="SastraDaily — a fast, modern social app (local-first demo)" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+</head>
+<body>
+  <noscript>This app requires JavaScript enabled.</noscript>
+  <header class="app-header">
+    <div class="brand"><img src="./assets/icon.svg" alt="SastraDaily" width="28" height="28"/><span>SastraDaily</span></div>
+    <div class="actions"><button id="themeToggle" title="Toggle theme" class="btn">🌓</button></div>
+  </header>
+
+  <main id="app" class="app-root" aria-live="polite">
+    <!-- Full-page Auth Route -->
+  <section id="route-auth" class="route">
+      <div class="auth-page gradient-card">
+        <h1 style="margin:0 0 8px">Welcome to SastraDaily</h1>
+        <p class="muted" style="margin:0 0 12px">Log in or create an account to continue</p>
+        <form id="authPageForm" class="auth-form" autocomplete="on">
+          <label class="input">
+            <span>Email</span>
+            <input type="email" id="authEmail" autocomplete="email" placeholder="you@example.com" required />
+          </label>
+          <label class="input">
+            <span>Password</span>
+            <input type="password" id="authPassword" autocomplete="current-password" minlength="6" placeholder="••••••••" required />
+          </label>
+          <div class="muted" style="font-size:12px;margin-top:-6px;margin-bottom:8px">For signup, you can also set a username:</div>
+          <label class="input">
+            <span>Username (optional on signup)</span>
+            <input type="text" id="authUsername" maxlength="30" placeholder="e.g. haris_5206" />
+          </label>
+          <div class="row" style="justify-content:space-between;margin-top:8px">
+            <button class="btn gradient" id="authSignup" type="button">Create account</button>
+            <button class="btn primary" id="authLogin" type="button">Login</button>
+          </div>
+          <p id="authPageError" class="error" role="alert" hidden></p>
+        </form>
+      </div>
+    </section>
+    <!-- Auth Modal -->
+    <dialog id="authModal">
+      <form method="dialog" id="authForm" class="card">
+        <h2>Welcome to SastraDaily</h2>
+        <p class="muted">Login or sign up to continue</p>
+        <label>
+          <span>Email</span>
+          <input type="email" id="email" autocomplete="email" required />
+        </label>
+        <label>
+          <span>Password</span>
+          <input type="password" id="password" autocomplete="current-password" minlength="6" required />
+        </label>
+        <div class="row">
+          <button id="doLogin" class="btn primary" value="login">Login</button>
+          <button id="doSignup" class="btn" value="signup">Sign up</button>
+          <button class="btn ghost" value="cancel">Cancel</button>
+        </div>
+        <p id="authError" class="error" role="alert" hidden></p>
+      </form>
+    </dialog>
+
+    <!-- Likes list modal -->
+    <dialog id="likesModal">
+      <div class="card" style="min-width:280px;max-width:420px">
+        <h3 style="margin-top:0">Likes</h3>
+        <ul id="likesList" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px"></ul>
+        <div class="row" style="justify-content:flex-end;margin-top:10px">
+          <button id="closeLikes" class="btn">Close</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Only the auth page lives here; other routes are separate pages -->
+  </main>
+
+  <script type="module">
+    import { pb, $, initTheme, makeAvatarFromEmail, dataUrlToBlob } from './js/shared.js';
+    initTheme();
+    const err = $('#authPageError');
+    $('#authLogin')?.addEventListener('click', async ()=>{
+      const email = $('#authEmail').value.trim().toLowerCase();
+      const password = $('#authPassword').value;
+      err.hidden=true;
+      try{ await pb.collection('users').authWithPassword(email, password); location.href = './feed.html'; }
+      catch(ex){ err.textContent = ex?.message||'Login failed'; err.hidden=false; }
+    });
+    $('#authSignup')?.addEventListener('click', async ()=>{
+      const email = $('#authEmail').value.trim().toLowerCase();
+      const password = $('#authPassword').value;
+      const username = $('#authUsername')?.value.trim();
+      err.hidden=true;
+      try{
+        const base = { email, password, passwordConfirm: password, bio: "Hey there! I'm using SastraDaily." };
+        if(username) base.username = username;
+        const rec = await pb.collection('users').create(base);
+        // Generate a default avatar based on email and upload it
+        try{
+          const dataUrl = await makeAvatarFromEmail(email);
+          const blob = await dataUrlToBlob(dataUrl);
+          const fd = new FormData();
+          fd.append('avatar', blob, 'avatar.png');
+          await pb.collection('users').update(rec.id, fd);
+        }catch{}
+        await pb.collection('users').authWithPassword(email, password);
+        location.href = './feed.html';
+      }catch(ex){ err.textContent = ex?.message||'Signup failed'; err.hidden=false; }
+    });
+    // If already authed, go straight to feed
+    if(pb.authStore.model){ location.href = './feed.html'; }
+  </script>
+</body>
+</html>
