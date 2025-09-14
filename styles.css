@@ -110,7 +110,7 @@ html, body {
 	margin: 0;
 }
 body {
-	font-family: 'Poppins', sans-serif;
+	font-family: 'Plus Jakarta Sans', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 	background: var(--bg);
 	color: var(--text);
 	-webkit-font-smoothing: antialiased;
@@ -244,12 +244,18 @@ a:hover {
 	position: sticky;
 	top: 100px;
 	height: fit-content;
+/* Brand logo sizing */
+.brand .brand-logo {
+		height: 36px;
+		width: auto;
+		display: block;
+}
 }
 .auth-page {
 	max-width: 500px;
 	margin: 15vh auto;
 	text-align: center;
-	padding: 32px;
+	/* text-fill-color is unsupported and has been removed */
 	background: var(--card);
 	border-radius: 32px;
 	box-shadow: var(--shadow);

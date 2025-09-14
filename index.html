@@ -7,65 +7,54 @@
   <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycHN5c21neWhuanB6dGdlcnZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NTcwMTgsImV4cCI6MjA3MzQzMzAxOH0.sLFqsvbQSXdtzgvH-bMsTuItL8K_FMUl0_Y4gtG7iXQ" />
   <meta name="pocketbase-url" content="https://web-production-1f8b.up.railway.app" />
   <meta http-equiv="x-ua-compatible" content="ie=edge" />
-  <title>SastraDaily</title>
-  <meta name="description" content="SastraDaily — a fast, modern social app (local-first demo)" />
+  <title>Team 1nf1nty</title>
+  <meta name="description" content="Team 1nf1nty — a fast, modern social app (local-first demo)" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./styles.css" />
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
 </head>
 <body>
   <noscript>This app requires JavaScript enabled.</noscript>
   <header class="app-header">
-    <div class="brand"><img src="./assets/icon.svg" alt="SastraDaily" width="28" height="28"/><span>SastraDaily</span></div>
+  <div class="brand"><img class="brand-logo" src="./1nf1n1ty-footer.webp" alt="1nf1n1ty logo" loading="eager" fetchpriority="high" onerror="this.onerror=null;this.src='./assets/icon.svg'" /></div>
     <div class="actions"><button id="themeToggle" title="Toggle theme" class="btn">🌓</button></div>
   </header>
 
   <main id="app" class="app-root" aria-live="polite">
     <!-- Full-page Auth Route -->
-    <section id="route-auth" class="route">
-      <div class="auth-page gradient-card" id="authContainer">
-        <h1 id="authTitle" class="gradient-text" style="margin:0 0 8px;text-align:center">Create your account</h1>
-        <p id="authSubtitle" class="muted" style="margin:0 0 12px;text-align:center">Join the 1nf1n1ty community</p>
+  <section id="route-auth" class="route">
+      <div class="auth-page gradient-card">
+        <h1 style="margin:0 0 8px">Welcome to Team 1nf1nty</h1>
+        <p class="muted" style="margin:0 0 12px">Log in or create an account to continue</p>
         <form id="authPageForm" class="auth-form" autocomplete="on">
-          <div id="registerFields">
-            <label class="input">
-              <span>Username</span>
-              <input type="text" id="authUsername" maxlength="30" placeholder="e.g. haris_5206" required />
-            </label>
-            <label class="input">
-              <span>Email</span>
-              <input type="email" id="authEmail" autocomplete="email" placeholder="you@example.com" required />
-            </label>
-            <label class="input">
-              <span>Password</span>
-              <input type="password" id="authPassword" autocomplete="current-password" minlength="6" placeholder="••••••••" required />
-            </label>
-          </div>
-          <div id="loginFields" style="display:none">
-            <label class="input">
-              <span>Email</span>
-              <input type="email" id="loginEmail" autocomplete="email" placeholder="you@example.com" required />
-            </label>
-            <label class="input">
-              <span>Password</span>
-              <input type="password" id="loginPassword" autocomplete="current-password" minlength="6" placeholder="••••••••" required />
-            </label>
+          <label class="input">
+            <span>Email</span>
+            <input type="email" id="authEmail" autocomplete="email" placeholder="you@example.com" required />
+          </label>
+          <label class="input">
+            <span>Password</span>
+            <input type="password" id="authPassword" autocomplete="current-password" minlength="6" placeholder="••••••••" required />
+          </label>
+          <div class="muted" style="font-size:12px;margin-top:-6px;margin-bottom:8px">For signup, you can also set a username:</div>
+          <label class="input">
+            <span>Username (optional on signup)</span>
+            <input type="text" id="authUsername" maxlength="30" placeholder="e.g. haris_5206" />
+          </label>
+          <div class="row" style="justify-content:space-between;margin-top:8px">
+            <button class="btn gradient" id="authSignup" type="button">Create account</button>
+            <button class="btn primary" id="authLogin" type="button">Login</button>
           </div>
           <p id="authPageError" class="error" role="alert" hidden></p>
-          <button class="btn gradient" id="authActionBtn" type="button" style="width:100%;margin-top:16px">Create account</button>
-          <div style="text-align:center;margin-top:12px">
-            <span id="toggleAuthText">Already have an account? <a href="#" id="toggleAuthLink">Log in</a></span>
-          </div>
         </form>
       </div>
     </section>
     <!-- Auth Modal -->
     <dialog id="authModal">
       <form method="dialog" id="authForm" class="card">
-        <h2>Welcome to SastraDaily</h2>
-        <p class="muted">Login or sign up to continue</p>
+  <h2>Welcome to Team 1nf1nty</h2>
+  <p class="muted">Login or sign up to continue</p>
         <label>
           <span>Email</span>
           <input type="email" id="email" autocomplete="email" required />
@@ -103,92 +92,56 @@
     const err = $('#authPageError');
     const avatarPathFor = (uid)=> `avatars/${uid}.png`;
 
-    // Toggle between register and login views
-    let isRegister = true;
-    const authTitle = $('#authTitle');
-    const authSubtitle = $('#authSubtitle');
-    const registerFields = $('#registerFields');
-    const loginFields = $('#loginFields');
-    const authActionBtn = $('#authActionBtn');
-    const toggleAuthText = $('#toggleAuthText');
-    const toggleAuthLink = $('#toggleAuthLink');
-
-    function setAuthView(register) {
-      isRegister = register;
-      if (register) {
-        authTitle.textContent = 'Create your account';
-        authSubtitle.textContent = 'Join the 1nf1n1ty community';
-        registerFields.style.display = '';
-        loginFields.style.display = 'none';
-        authActionBtn.textContent = 'Create account';
-        toggleAuthText.innerHTML = 'Already have an account? <a href="#" id="toggleAuthLink">Log in</a>';
-      } else {
-        authTitle.textContent = 'Log in to your account';
-        authSubtitle.textContent = 'Welcome back to 1nf1n1ty';
-        registerFields.style.display = 'none';
-        loginFields.style.display = '';
-        authActionBtn.textContent = 'Log in';
-        toggleAuthText.innerHTML = 'Don\'t have an account? <a href="#" id="toggleAuthLink">Create account</a>';
-      }
-    }
-
-    setAuthView(true);
-    toggleAuthText.addEventListener('click', (e) => {
-      if (e.target.id === 'toggleAuthLink') {
-        setAuthView(!isRegister);
-      }
+    $('#authLogin')?.addEventListener('click', async ()=>{
+      const email = $('#authEmail').value.trim().toLowerCase();
+      const password = $('#authPassword').value;
+      err.hidden=true;
+      try{
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if(error) throw error;
+        location.href = './feed.html';
+      } catch(ex){ err.textContent = ex?.message||'Login failed'; err.hidden=false; }
     });
 
-    authActionBtn.addEventListener('click', async () => {
-      err.hidden = true;
-      if (isRegister) {
-        // Register
-        const email = $('#authEmail').value.trim().toLowerCase();
-        const password = $('#authPassword').value;
-        const username = $('#authUsername').value.trim();
-        try {
-          const res = await sb.auth.signUp({ email, password });
-          if (res.error) throw res.error;
-          let session = res.data?.session || null;
-          if (!session) {
-            const res2 = await sb.auth.signInWithPassword({ email, password });
-            if (res2.error) throw res2.error;
-            session = res2.data?.session || null;
-          }
-          const userId = session?.user?.id || res.data?.user?.id;
-          if (!userId) throw new Error('Signup failed: no user session');
-          const base = { id: userId, email, bio: "Hey there! I'm using 1nf1n1ty." };
-          if (username) base.username = username;
-          await sb.from('profiles').upsert(base, { onConflict: 'id' });
-          try {
-            const dataUrl = await makeAvatarFromEmail(email);
-            const blob = await dataUrlToBlob(dataUrl);
-            const path = avatarPathFor(userId);
-            await uploadImage(path, blob);
-            await sb.from('profiles').update({ avatar_url: path }).eq('id', userId);
-          } catch {}
-          location.href = './feed.html';
-        } catch (ex) {
-          err.textContent = ex?.message || 'Sign up failed';
-          err.hidden = false;
+    $('#authSignup')?.addEventListener('click', async ()=>{
+      const email = $('#authEmail').value.trim().toLowerCase();
+      const password = $('#authPassword').value;
+      const username = $('#authUsername')?.value.trim();
+      err.hidden=true;
+      try{
+        // Attempt sign up
+        const res = await sb.auth.signUp({ email, password });
+        if(res.error) throw res.error;
+        let session = res.data?.session || null;
+        // If confirmations are OFF, session will be returned here. Otherwise, sign in now.
+        if(!session){
+          const res2 = await sb.auth.signInWithPassword({ email, password });
+          if(res2.error) throw res2.error;
+          session = res2.data?.session || null;
         }
-      } else {
-        // Login
-        const email = $('#loginEmail').value.trim().toLowerCase();
-        const password = $('#loginPassword').value;
-        try {
-          const { error } = await sb.auth.signInWithPassword({ email, password });
-          if (error) throw error;
-          location.href = './feed.html';
-        } catch (ex) {
-          err.textContent = ex?.message || 'Login failed';
-          err.hidden = false;
-        }
-      }
-    });
+        const userId = session?.user?.id || res.data?.user?.id;
+        if(!userId) throw new Error('Signup failed: no user session');
 
+        // Upsert profile row AFTER session exists (RLS requirements)
+  const base = { id: userId, email, bio: "Hey there! I'm using Team 1nf1nty." };
+        if(username) base.username = username;
+        await sb.from('profiles').upsert(base, { onConflict: 'id' });
+
+        // Generate and upload default avatar (best-effort)
+        try{
+          const dataUrl = await makeAvatarFromEmail(email);
+          const blob = await dataUrlToBlob(dataUrl);
+          const path = avatarPathFor(userId);
+          await uploadImage(path, blob);
+          await sb.from('profiles').update({ avatar_url: path }).eq('id', userId);
+        }catch{}
+
+        // Done
+        location.href = './feed.html';
+      }catch(ex){ err.textContent = ex?.message||'Signup failed'; err.hidden=false; }
+    });
     // If already authed, go straight to feed
-    try { const { data } = await sb.auth.getUser(); if (data?.user) location.href = './feed.html'; } catch {}
+    try{ const { data } = await sb.auth.getUser(); if(data?.user) location.href = './feed.html'; }catch{}
   </script>
 </body>
 </html>

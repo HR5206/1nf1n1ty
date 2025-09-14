@@ -37,13 +37,13 @@ $('#saveProfile')?.addEventListener('click', async ()=>{
       const blob = await compressImage(f, 512, 0.9) || f;
       const path = `avatars/${me.id}.jpg`;
       await uploadImage(path, blob);
-      await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using SastraDaily.", username: username||null, avatar_url: path }, { onConflict: 'id' });
+  await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using Team 1nf1nty.", username: username||null, avatar_url: path }, { onConflict: 'id' });
     }else{
-      await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using SastraDaily.", username: username||null }, { onConflict: 'id' });
+  await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using Team 1nf1nty.", username: username||null }, { onConflict: 'id' });
     }
     // Optimistically reflect changes
     if(username) $('#profileUsername').textContent = username;
-    $('#profileBio').textContent = bio || "Hey there! I'm using SastraDaily.";
+  $('#profileBio').textContent = bio || "Hey there! I'm using Team 1nf1nty.";
     await renderProfile();
   }catch(ex){
     console.error('Failed to update profile', ex);
@@ -62,7 +62,7 @@ async function renderProfile(){
   // Header details
   $('#profileUsername').textContent = displayName(user);
   $('#profileEmail').textContent = user?.email || me.email;
-  $('#profileBio').textContent = (user?.bio) || "Hey there! I'm using SastraDaily.";
+  $('#profileBio').textContent = (user?.bio) || "Hey there! I'm using Team 1nf1nty.";
   const usernameInput = $('#usernameInput'); if(usernameInput) usernameInput.value = user.username || '';
   const bioInput = $('#bioInput'); if(bioInput) bioInput.value = user?.bio || '';
   const img = $('#profileAvatar');
