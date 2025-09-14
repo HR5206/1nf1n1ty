@@ -110,3 +110,65 @@ Notes:
 - For public deployments, tighten the rules and enable file size/type limits.
 
 If you want, I can pre-create a PocketBase migration (JSON) for import to speed this up.
+
+---
+
+# Containerize PocketBase (Docker)
+
+This repo includes a `Dockerfile` that builds a tiny Alpine-based image which downloads and runs the PocketBase Linux binary. Data is stored under `/data` so you can mount a volume.
+
+## Build (Windows PowerShell)
+
+```powershell
+docker build -t pocketbase-socflow:latest .
+```
+
+## Run locally with volume
+
+```powershell
+# Creates a local folder for persistent data (DB, uploads)
+$DataPath = "${PWD}/pb_data"
+if (!(Test-Path $DataPath)) { New-Item -ItemType Directory -Path $DataPath | Out-Null }
+
+docker run --rm -it -p 8090:8080 -v "$DataPath:/data" pocketbase-socflow:latest
+# Admin UI: http://localhost:8090/_/
+```
+
+Notes:
+- The container listens on `0.0.0.0:8080` internally; we publish it as host port `8090`.
+- All PocketBase data (SQLite DB and uploads) will be created under `pb_data` in your project directory.
+
+## Fly.io (optional)
+
+If you want a free/low-cost public URL, deploy this container to Fly.io:
+
+```powershell
+# Install flyctl (one-time)
+iwr https://fly.io/install.ps1 -useb | iex
+fly auth signup
+
+# Initialize (creates fly.toml; choose a name when prompted)
+fly launch --no-deploy
+
+# Create a persistent volume (1GB example). Pick a region close to you, e.g. iad, fra, sin
+fly volumes create pb_data --size 1 --region iad
+
+# Edit fly.toml to mount the volume
+# Add:
+# [[mounts]]
+#   source = "pb_data"
+#   destination = "/data"
+
+# Deploy
+fly deploy
+
+# Open Admin UI at the app URL printed after deploy, e.g.:
+# https://<your-app>.fly.dev/_/
+```
+
+After deploying, set CORS allowed origins in the Admin UI → Settings → CORS (add your production site and `http://localhost:5173` for local dev). Then update your frontend to point to your hosted PocketBase URL in `js/shared.js`:
+
+```js
+// shared.js
+export const pb = new PocketBase('https://your-app.fly.dev');
+```

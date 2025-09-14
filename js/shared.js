@@ -1,6 +1,11 @@
 import PocketBase from 'https://unpkg.com/pocketbase@0.21.3/dist/pocketbase.es.mjs';
 
-export const pb = new PocketBase('http://127.0.0.1:8090');
+// Allow overriding the PocketBase URL via a global or localStorage for easy prod deploys
+const PB_URL = (typeof window !== 'undefined' && (window.PB_URL || window.POCKETBASE_URL))
+  || (typeof localStorage !== 'undefined' && (localStorage.getItem('PB_URL') || localStorage.getItem('POCKETBASE_URL')))
+  || 'http://127.0.0.1:8090';
+
+export const pb = new PocketBase(PB_URL);
 
 // DOM helpers
 export const $ = (s, r=document)=> r.querySelector(s);
