@@ -1,7 +1,15 @@
-import PocketBase from 'https://unpkg.com/pocketbase@0.21.3/dist/pocketbase.es.mjs';
+import PocketBase from 'https://unpkg.com/pocketbase@0.22.21/dist/pocketbase.es.mjs';
 
-// Allow overriding the PocketBase URL via a global or localStorage for easy prod deploys
-const PB_URL = (typeof window !== 'undefined' && (window.PB_URL || window.POCKETBASE_URL))
+// Allow overriding the PocketBase URL via a <meta name="pocketbase-url" content="...">
+// or via a global (window.PB_URL) or localStorage. Falls back to localhost.
+let metaUrl = null;
+try {
+  const meta = document?.querySelector?.('meta[name="pocketbase-url"]');
+  metaUrl = meta?.getAttribute?.('content') || null;
+} catch {}
+
+const PB_URL = metaUrl
+  || (typeof window !== 'undefined' && (window.PB_URL || window.POCKETBASE_URL))
   || (typeof localStorage !== 'undefined' && (localStorage.getItem('PB_URL') || localStorage.getItem('POCKETBASE_URL')))
   || 'http://127.0.0.1:8090';
 

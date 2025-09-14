@@ -1,0 +1,43 @@
+# VCS
+.git
+.gitignore
+
+# Node / frontend junk
+node_modules
+dist
+build
+.parcel-cache
+.vite
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local PocketBase data
+pb_data
+*.db
+*.sqlite
+uploads
+*.log
+
+# Editor
+.vscode
+.idea.git
+.gitignore
+.vscode
+.idea
+node_modules
+npm-debug.log
+*.log
+*.tmp
+*.swp
+*.DS_Store
+Thumbs.db
+dist
+build
+out
+.cache
+pocketbase*
+pb_data/
+*.db
+*.sqlite
