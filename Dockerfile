@@ -15,5 +15,5 @@ RUN chmod +x /pocketbase-bin
 # Expose port
 EXPOSE 8090
 
-# Start PocketBase
+# Start PocketBase with absolute path
 CMD ["/pocketbase-bin", "serve", "--http=0.0.0.0:8090", "--dir=/pocketbase/pb_data"]
