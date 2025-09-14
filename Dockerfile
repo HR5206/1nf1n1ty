@@ -9,11 +9,12 @@ RUN unzip /tmp/pocketbase.zip -d / && \
     mv /pocketbase /pocketbase-bin && \
     rm -r /tmp/pocketbase.zip
 
-# Add execute permissions to the PocketBase binary
-RUN chmod +x /pocketbase-bin
+# Debug: Verify the binary exists and is executable
+RUN ls -l /pocketbase-bin && chmod +x /pocketbase-bin
 
 # Expose port
 EXPOSE 8090
 
-# Start PocketBase with absolute path
-CMD ["/pocketbase-bin", "serve", "--http=0.0.0.0:8090", "--dir=/pocketbase/pb_data"]
+# Use ENTRYPOINT to enforce the binary path, with CMD as arguments
+ENTRYPOINT ["/pocketbase-bin"]
+CMD ["serve", "--http=0.0.0.0:8090", "--dir=/pocketbase/pb_data"]
