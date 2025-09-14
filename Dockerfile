@@ -1,17 +1,22 @@
-FROM alpine:latest
+FROM alpine:3.19
 
-# Install dependencies
-RUN apk add --no-cache ca-certificates
+# Install minimal dependencies
+RUN apk add --no-cache ca-certificates unzip
 
-# Download PocketBase (replace with latest version from releases)
-ADD https://github.com/pocketbase/pocketbase/releases/download/v0.22.21/pocketbase_0.22.21_linux_amd64.zip /tmp/pocketbase.zip
-RUN unzip /tmp/pocketbase.zip -d /pocketbase && rm /tmp/pocketbase.zip
+# Configure PocketBase version
+ENV PB_VERSION=0.22.21
 
-# Add execute permissions to the PocketBase binary
-RUN chmod +x /pocketbase/pocketbase
+# Download and install PocketBase
+ADD https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip /tmp/pocketbase.zip
+RUN unzip /tmp/pocketbase.zip -d /usr/local/bin \
+	&& rm /tmp/pocketbase.zip \
+	&& chmod +x /usr/local/bin/pocketbase
 
-# Expose port
-EXPOSE 8090
+# Data directory for database and uploads
+RUN mkdir -p /data
 
-# Start PocketBase
-CMD ["/pocketbase/pocketbase", "serve", "--http=0.0.0.0:8090", "--dir=/pocketbase/pb_data"]
+# Railway provides PORT env; default to 8080 for local runs
+EXPOSE 8080
+
+# Use a shell to expand ${PORT}; store data under /data
+CMD ["/bin/sh", "-lc", "/usr/local/bin/pocketbase serve --http=0.0.0.0:${PORT:-8080} --dir=/data"]
