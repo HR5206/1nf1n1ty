@@ -1,10 +1,10 @@
-import { pb, $, initTheme, ensureAuthedOrRedirect, compressImage, initNavAuthControls, displayName } from './shared.js';
+import { sb, $, initTheme, ensureAuthedOrRedirect, compressImage, initNavAuthControls, displayName, imageUrl, uploadImage } from './shared.js';
 
 initTheme();
 initNavAuthControls();
-if(!ensureAuthedOrRedirect()) throw new Error('Not authed');
-
-const me = pb.authStore.model;
+await ensureAuthedOrRedirect();
+const { data: userWrap } = await sb.auth.getUser();
+const me = userWrap?.user;
 
 $('#changeAvatar')?.addEventListener('click', ()=> $('#avatarInput').click());
 // Auto-upload avatar on file pick with live preview
@@ -16,9 +16,9 @@ $('#avatarInput')?.addEventListener('change', async (e)=>{
     const img = $('#profileAvatar');
     if(img) img.src = url; // immediate local preview
     const blob = await compressImage(file, 512, 0.9);
-    const fd = new FormData();
-    if(blob) fd.append('avatar', blob, 'avatar.jpg'); else fd.append('avatar', file, file.name||'avatar');
-    await pb.collection('users').update(me.id, fd);
+  const path = `avatars/${me.id}.jpg`;
+  await uploadImage(path, blob || file);
+  await sb.from('profiles').update({ avatar_url: path }).eq('id', me.id);
   }catch(ex){
     console.error('Avatar update failed', ex);
     alert(ex?.message || 'Failed to change avatar');
@@ -34,15 +34,12 @@ $('#saveProfile')?.addEventListener('click', async ()=>{
     const username = $('#usernameInput')?.value.trim();
     const f = $('#avatarInput').files?.[0];
     if(f){
-      const fd = new FormData();
-      fd.append('bio', bio || "Hey there! I'm using SastraDaily.");
-      if(username) fd.append('username', username);
-      const blob = await compressImage(f, 512, 0.9); if(blob) fd.append('avatar', blob, 'avatar.jpg'); else fd.append('avatar', f, f.name||'avatar');
-      await pb.collection('users').update(me.id, fd);
+      const blob = await compressImage(f, 512, 0.9) || f;
+      const path = `avatars/${me.id}.jpg`;
+      await uploadImage(path, blob);
+      await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using SastraDaily.", username: username||null, avatar_url: path }, { onConflict: 'id' });
     }else{
-      const data = { bio: bio || "Hey there! I'm using SastraDaily." };
-      if(username) data.username = username;
-      await pb.collection('users').update(me.id, data);
+      await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using SastraDaily.", username: username||null }, { onConflict: 'id' });
     }
     // Optimistically reflect changes
     if(username) $('#profileUsername').textContent = username;
@@ -61,23 +58,23 @@ $('#bioInput')?.addEventListener('input', (e)=>{
 });
 
 async function renderProfile(){
-  const user = await pb.collection('users').getOne(me.id);
+  const { data: user } = await sb.from('profiles').select('*').eq('id', me.id).single();
   // Header details
   $('#profileUsername').textContent = displayName(user);
-  $('#profileEmail').textContent = user.email;
-  $('#profileBio').textContent = user.bio || "Hey there! I'm using SastraDaily.";
+  $('#profileEmail').textContent = user?.email || me.email;
+  $('#profileBio').textContent = (user?.bio) || "Hey there! I'm using SastraDaily.";
   const usernameInput = $('#usernameInput'); if(usernameInput) usernameInput.value = user.username || '';
-  const bioInput = $('#bioInput'); if(bioInput) bioInput.value = user.bio || '';
+  const bioInput = $('#bioInput'); if(bioInput) bioInput.value = user?.bio || '';
   const img = $('#profileAvatar');
-  img.src = user.avatar ? pb.files.getUrl(user, user.avatar) : 'https://placehold.co/120x120?text=' + encodeURIComponent((user.email||'?').charAt(0).toUpperCase());
+  img.src = user?.avatar_url ? imageUrl(user.avatar_url) : 'https://placehold.co/120x120?text=' + encodeURIComponent((user?.email||me.email||'?').charAt(0).toUpperCase());
   // Posts grid
-  const posts = await pb.collection('posts').getFullList({ filter: `user="${user.id}"`, sort: '-created' });
+  const { data: posts } = await sb.from('posts').select('id, image_path').eq('user_id', me.id).order('created_at', { ascending: false });
   const grid = $('#profileGrid');
-  grid.innerHTML = posts.map(p=>{
-    const url = p.image? pb.files.getUrl(p, p.image, { thumb: '640x640' }): '';
+  grid.innerHTML = (posts||[]).map(p=>{
+    const url = p.image_path? imageUrl(p.image_path): '';
     return `<div class="grid-item" data-pid="${p.id}" style="position:relative"><img loading="lazy" src="${url}" alt="post"/><button class="btn gradient" data-delete-post="${p.id}" style="position:absolute;top:6px;right:6px;">Delete</button></div>`;
   }).join('');
-  $('#statPosts').textContent = String(posts.length);
+  $('#statPosts').textContent = String((posts||[]).length);
 }
 
 // Delete post cascade (delegate on the grid for reliability)
@@ -91,16 +88,12 @@ $('#profileGrid')?.addEventListener('click', async (e)=>{
   if(!ok) return;
   try{
     el.setAttribute('disabled','');
-    // Remove comments and likes first, then delete the post
-    const [cs, ls] = await Promise.all([
-      pb.collection('comments').getFullList({ filter: `post="${pid}"` }),
-      pb.collection('likes').getFullList({ filter: `post="${pid}"` })
-    ]);
-    await Promise.all([
-      ...cs.map(c=> pb.collection('comments').delete(c.id)),
-      ...ls.map(l=> pb.collection('likes').delete(l.id))
-    ]);
-    await pb.collection('posts').delete(pid);
+    // Remove comments and likes first (if no DB cascade), then delete the post
+    const { data: cs } = await sb.from('comments').select('id').eq('post_id', pid);
+    const { data: ls } = await sb.from('likes').select('id').eq('post_id', pid);
+    if(cs?.length) await sb.from('comments').delete().in('id', cs.map(c=> c.id));
+    if(ls?.length) await sb.from('likes').delete().in('id', ls.map(l=> l.id));
+    await sb.from('posts').delete().eq('id', pid);
     // Optimistic: remove card from DOM and update count
     const item = document.querySelector(`.grid-item[data-pid="${pid}"]`);
     item?.remove();
@@ -117,7 +110,7 @@ $('#profileGrid')?.addEventListener('click', async (e)=>{
 
 // Realtime: subscribe to my user doc and my posts
 renderProfile();
-pb.collection('users').subscribe(me.id, ()=>{ renderProfile(); });
-pb.collection('posts').subscribe('*', (e)=>{
-  if(e?.record?.user === me.id) renderProfile();
-});
+// Realtime: any change to my profile or posts triggers a refresh
+import { subscribeTable } from './shared.js';
+const unsub1 = subscribeTable('profiles', `id=eq.${me.id}`, ()=> renderProfile());
+const unsub2 = subscribeTable('posts', `user_id=eq.${me.id}`, ()=> renderProfile());

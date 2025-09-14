@@ -1,31 +1,33 @@
-import { pb, $, $$, initTheme, isAuthed, ensureAuthedOrRedirect, displayName, compressImage, initNavAuthControls } from './shared.js';
+import { sb, $, $$, initTheme, ensureAuthedOrRedirect, displayName, compressImage, initNavAuthControls, imageUrl, uploadImage, subscribeTable } from './shared.js';
 
 initTheme();
 initNavAuthControls();
-if(!ensureAuthedOrRedirect()) throw new Error('Not authed');
+await ensureAuthedOrRedirect();
+const { data: userWrap } = await sb.auth.getUser();
+const me = userWrap?.user;
 
 function toDate(x){ try{ return x? new Date(x): new Date(); }catch{ return new Date(); } }
 
 const FEED_PAGE=12;
 async function buildPostElement(p){
   const li = document.createElement('li'); li.className='post'; li.dataset.id=p.id;
-  const author = p.expand?.user;
+  const author = p.profiles || p.profile || p.user;
   let avatarUrl = 'https://placehold.co/64x64';
-  if(author?.avatar){ avatarUrl = pb.files.getUrl(author, author.avatar, { thumb: '64x64' }); }
-  const when = toDate(p.created).toLocaleString();
-  const imageUrl = p.image ? pb.files.getUrl(p, p.image) : '';
+  if(author?.avatar_url){ avatarUrl = imageUrl(author.avatar_url); }
+  const when = toDate(p.created_at || p.created).toLocaleString();
+  const mediaUrl = p.image_path ? imageUrl(p.image_path) : '';
   li.innerHTML = `
     <header class="row">
       <img class="avatar" src="${avatarUrl}" alt="avatar"/>
-      <div><div><strong>${displayName(p.expand?.user)||''}</strong></div><div class="muted">${when}</div></div>
+      <div><div><strong>${displayName(author)||''}</strong></div><div class="muted">${when}</div></div>
     </header>
-    <div class="media" data-media="${p.id}">${imageUrl?`<img loading="lazy" src="${imageUrl}" alt="post media"/>`:''}<div class="dbl-heart" id="h_${p.id}">❤</div></div>
+    <div class="media" data-media="${p.id}">${mediaUrl?`<img loading="lazy" src="${mediaUrl}" alt="post media"/>`:''}<div class="dbl-heart" id="h_${p.id}">❤</div></div>
     <div class="actions">
       <button class="btn" data-like="${p.id}">❤ Like</button>
       <button class="btn" data-comment-focus="${p.id}">💬 Comment</button>
     </div>
     <div class="likes" data-likes="${p.id}" data-open-likes="${p.id}"></div>
-    <div class="caption"><strong>${displayName(p.expand?.user)||''}</strong> ${(p.caption||'')}</div>
+    <div class="caption"><strong>${displayName(author)||''}</strong> ${(p.caption||'')}</div>
     <ul class="comments" id="c_${p.id}"></ul>
     <div class="comment-input"><input data-cin="${p.id}" type="text" placeholder="Add a comment..." maxlength="200"/><button class="btn" data-csend="${p.id}">Post</button></div>
   `;
@@ -43,30 +45,29 @@ function cleanup(){
 function subscribeLikes(postId){
   if(unsubLikes.has(postId)){ try{unsubLikes.get(postId)()}catch{} }
   const handler = async ()=>{
-    const list = await pb.collection('likes').getFullList({ filter: `post="${postId}"` });
+    const { data: list } = await sb.from('likes').select('user_id').eq('post_id', postId);
     const likeBtn = document.querySelector(`[data-like="${postId}"]`);
     const likesDiv = document.querySelector(`[data-likes="${postId}"]`);
-    const me = pb.authStore.model;
-    const liked = !!(me && list.some(l=> l.user === me.id));
+    const liked = !!(me && list?.some(l=> l.user_id === me.id));
     if(likeBtn){ likeBtn.textContent = liked? '💙 Liked' : '❤ Like'; }
-    if(likesDiv){ const n=list.length; likesDiv.textContent = n? `${n} ${n===1?'like':'likes'}` : ''; }
+    const n = list?.length||0; if(likesDiv){ likesDiv.textContent = n? `${n} ${n===1?'like':'likes'}` : ''; }
   };
   handler();
-  unsubLikes.set(postId, pb.collection('likes').subscribe('*', handler, { filter: `post="${postId}"` }));
+  unsubLikes.set(postId, subscribeTable('likes', `post_id=eq.${postId}`, handler));
 }
 
 function subscribeComments(postId, firstN=null){
   if(unsubComments.has(postId)){ try{unsubComments.get(postId)()}catch{} }
   const handler = async ()=>{
-    const list = await pb.collection('comments').getFullList({ filter: `post="${postId}"`, sort: '+created', expand: 'user' });
-    const items = firstN? list.slice(0, firstN) : list;
+    const { data: list } = await sb.from('comments').select('id, text, created_at, user_id, profiles(*)').eq('post_id', postId).order('created_at', { ascending: true });
+    const items = firstN? (list||[]).slice(0, firstN) : (list||[]);
     const ul = document.getElementById(`c_${postId}`); if(!ul) return;
-    let html = items.map(c=> `<li><strong>${displayName(c.expand?.user)||''}</strong> ${c.text||''}</li>`).join('');
-    if(firstN && list.length>items.length){ html += `<li><button class="btn" data-viewall="${postId}">View all ${list.length} comments</button></li>`; }
+    let html = items.map(c=> `<li><strong>${displayName(c.profiles)||''}</strong> ${c.text||''}</li>`).join('');
+    if(firstN && (list?.length||0)>items.length){ html += `<li><button class="btn" data-viewall="${postId}">View all ${list.length} comments</button></li>`; }
     ul.innerHTML = html;
   };
   handler();
-  unsubComments.set(postId, pb.collection('comments').subscribe('*', handler, { filter: `post="${postId}"` }));
+  unsubComments.set(postId, subscribeTable('comments', `post_id=eq.${postId}`, handler));
 }
 
 async function loadAndRenderFeed(){
@@ -74,8 +75,8 @@ async function loadAndRenderFeed(){
   for(const [,u] of unsubLikes){ try{u()}catch{} } unsubLikes.clear();
   for(const [,u] of unsubComments){ try{u()}catch{} } unsubComments.clear();
   list.innerHTML='';
-  const page = await pb.collection('posts').getList(1, FEED_PAGE, { sort: '-created', expand: 'user' });
-  for(const p of page.items){
+  const { data: items } = await sb.from('posts').select('id, caption, image_path, created_at, user_id, profiles(*)').order('created_at', { ascending: false }).limit(FEED_PAGE);
+  for(const p of (items||[])){
     const li = await buildPostElement(p);
     list.appendChild(li);
     subscribeLikes(p.id);
@@ -87,7 +88,7 @@ function subscribeFeed(){
   const list = $('#feedList'); if(!list) return;
   if(unsubPosts){ try{unsubPosts()}catch{} unsubPosts=null; }
   loadAndRenderFeed();
-  unsubPosts = pb.collection('posts').subscribe('*', ()=> loadAndRenderFeed());
+  unsubPosts = subscribeTable('posts', '', ()=> loadAndRenderFeed());
 }
 
 // Uploader handlers
@@ -121,14 +122,18 @@ postImage?.addEventListener('change', ()=>{
 });
 captionEl?.addEventListener('input', ()=> captionCount.textContent = String(captionEl.value.length));
 postSubmit?.addEventListener('click', async ()=>{
-  if(!isAuthed()) return;
   const f = postImage.files?.[0]; const caption = captionEl.value.trim();
-  const me = pb.authStore.model;
-  const data={ user: me.id, caption };
-  let fileToSend = null;
-  if(f){ const blob = await compressImage(f, 1280, 0.85); fileToSend = blob; }
-  const rec = await pb.collection('posts').create(data);
-  if(fileToSend){ await pb.collection('posts').update(rec.id, { image: fileToSend }); }
+  if(!me) return;
+  let fileBlob = null;
+  if(f){ fileBlob = await compressImage(f, 1280, 0.85) || f; }
+  // Ensure my profile row exists (in case signup bypassed profile upsert)
+  try{ await sb.from('profiles').upsert({ id: me.id, email: me.email }, { onConflict: 'id' }); }catch{}
+  const { data: rec, error } = await sb.from('posts').insert({ user_id: me.id, caption }).select('id').single();
+  if(!error && rec && fileBlob){
+    const path = `posts/${rec.id}.jpg`;
+    await uploadImage(path, fileBlob);
+    await sb.from('posts').update({ image_path: path }).eq('id', rec.id);
+  }
   // Reset uploader UI
   postImage.value=''; captionEl.value=''; captionCount.textContent='0'; hidePreview();
 });
@@ -138,10 +143,13 @@ $('#app')?.addEventListener('click', async (e)=>{
   const openLikes = e.target.closest('[data-open-likes]');
   if(openLikes){
     const pid = openLikes.getAttribute('data-open-likes');
-    const likes = await pb.collection('likes').getFullList({ filter: `post="${pid}"`, expand: 'user' });
+    const { data: likes } = await sb.from('likes')
+      .select('user_id, profiles(id, username, email, avatar_url)')
+      .eq('post_id', pid);
     const ul = $('#likesList');
-    ul.innerHTML = likes.length? likes.map(l=>{
-      const u = l.expand?.user; const av = u?.avatar? pb.files.getUrl(u, u.avatar, { thumb:'32x32' }): 'https://placehold.co/32x32';
+    ul.innerHTML = (likes && likes.length) ? likes.map(l=>{
+      const u = l.profiles;
+      const av = u?.avatar_url ? imageUrl(u.avatar_url) : 'https://placehold.co/32x32';
       const name = displayName(u);
       return `<li class="row"><img class="avatar" style="width:32px;height:32px" src="${av}" alt=""/><span>${name}</span></li>`;
     }).join('') : '<li class="muted">No likes yet</li>';
@@ -157,17 +165,16 @@ $('#app')?.addEventListener('click', async (e)=>{
     const pid = cbtn.getAttribute('data-csend');
     const input = document.querySelector(`[data-cin="${pid}"]`);
     const text = input.value.trim(); if(!text) return;
-    const me = pb.authStore.model;
-    await pb.collection('comments').create({ post: pid, user: me.id, text });
+  await sb.from('comments').insert({ post_id: pid, user_id: me.id, text });
     input.value=''; return;
   }
   const likeBtn = e.target.closest('[data-like]');
   if(likeBtn){
     const pid = likeBtn.getAttribute('data-like');
-    const me = pb.authStore.model; if(!me) return;
-    const existing = await pb.collection('likes').getFullList({ filter: `post="${pid}" && user="${me.id}"`, limit: 1 });
-    if(existing.length){ await pb.collection('likes').delete(existing[0].id); }
-    else{ await pb.collection('likes').create({ post: pid, user: me.id }); }
+  if(!me) return;
+  const { data: existing } = await sb.from('likes').select('id').eq('post_id', pid).eq('user_id', me.id).limit(1);
+  if(existing && existing.length){ await sb.from('likes').delete().eq('id', existing[0].id); }
+  else { await sb.from('likes').insert({ post_id: pid, user_id: me.id }); }
     return;
   }
   const focusBtn = e.target.closest('[data-comment-focus]');
@@ -183,9 +190,9 @@ $('#app')?.addEventListener('click', async (e)=>{
   const now = Date.now();
   if(now - lastTap < 300){
     const pid = media.getAttribute('data-media');
-    const me = pb.authStore.model; if(!me) return;
-    const existing = await pb.collection('likes').getFullList({ filter: `post="${pid}" && user="${me.id}"`, limit: 1 });
-    if(!existing.length){ await pb.collection('likes').create({ post: pid, user: me.id }); const heart = document.getElementById(`h_${pid}`); if(heart){ heart.classList.add('show'); setTimeout(()=>heart.classList.remove('show'), 600); } }
+  if(!me) return;
+  const { data: existing } = await sb.from('likes').select('id').eq('post_id', pid).eq('user_id', me.id).limit(1);
+  if(!existing || !existing.length){ await sb.from('likes').insert({ post_id: pid, user_id: me.id }); const heart = document.getElementById(`h_${pid}`); if(heart){ heart.classList.add('show'); setTimeout(()=>heart.classList.remove('show'), 600); } }
   }
   lastTap = now;
 }, true);

@@ -1,19 +1,25 @@
-import PocketBase from 'https://unpkg.com/pocketbase@0.22.21/dist/pocketbase.es.mjs';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Allow overriding the PocketBase URL via a <meta name="pocketbase-url" content="...">
-// or via a global (window.PB_URL) or localStorage. Falls back to localhost.
-let metaUrl = null;
-try {
-  const meta = document?.querySelector?.('meta[name="pocketbase-url"]');
-  metaUrl = meta?.getAttribute?.('content') || null;
-} catch {}
+function readMeta(name){
+  try{ return document?.querySelector?.(`meta[name="${name}"]`)?.getAttribute?.('content') || null; }
+  catch{ return null; }
+}
 
-const PB_URL = metaUrl
-  || (typeof window !== 'undefined' && (window.PB_URL || window.POCKETBASE_URL))
-  || (typeof localStorage !== 'undefined' && (localStorage.getItem('PB_URL') || localStorage.getItem('POCKETBASE_URL')))
-  || 'http://127.0.0.1:8090';
+const SB_URL = readMeta('supabase-url')
+  || (typeof window !== 'undefined' && (window.SUPABASE_URL || window.SB_URL))
+  || (typeof localStorage !== 'undefined' && (localStorage.getItem('SUPABASE_URL') || localStorage.getItem('SB_URL')))
+  || '';
+const SB_ANON = readMeta('supabase-anon-key')
+  || (typeof window !== 'undefined' && (window.SUPABASE_ANON_KEY || window.SB_ANON))
+  || (typeof localStorage !== 'undefined' && (localStorage.getItem('SUPABASE_ANON_KEY') || localStorage.getItem('SB_ANON')))
+  || '';
 
-export const pb = new PocketBase(PB_URL);
+export const sb = createClient(SB_URL, SB_ANON, { auth: { persistSession: true, autoRefreshToken: true } });
+
+let currentUser = null;
+// Initialize current user and keep in sync
+sb.auth.getUser().then(res=>{ currentUser = res.data?.user || null; }).catch(()=>{});
+sb.auth.onAuthStateChange((_event, session)=>{ currentUser = session?.user || null; });
 
 // DOM helpers
 export const $ = (s, r=document)=> r.querySelector(s);
@@ -68,26 +74,36 @@ export async function compressImage(file, maxW=1280, quality=0.85){
   return blob;
 }
 export function displayName(user){
-  const uname = (user?.username||'').trim();
+  const uname = (user?.username||user?.display_name||'').trim();
   if(uname) return uname;
-  const id = (user?.id||'').toString();
+  const id = (user?.id||user?.user_id||'').toString();
   if(id) return `User-${id.slice(-4)}`;
   return 'User';
 }
 
-// Auth helpers
-export function isAuthed(){ return !!pb.authStore.model; }
-export function ensureAuthedOrRedirect(){ if(!isAuthed()) { location.href = './index.html'; return false; } return true; }
+// Auth helpers (Supabase)
+export function getUserSync(){ return currentUser; }
+export async function getUser(){ try{ const r = await sb.auth.getUser(); return r.data.user || null; }catch{ return null; } }
+export async function ensureAuthedOrRedirect(){ const u = await getUser(); if(!u){ location.href = './index.html'; return false; } return true; }
 
 export function initNavAuthControls(){
   const loginBtn = $('#loginBtn');
   const logoutBtn = $('#logoutBtn');
-  if(isAuthed()){
-    loginBtn?.setAttribute('hidden','');
-    logoutBtn?.removeAttribute('hidden');
-  }else{
-    logoutBtn?.setAttribute('hidden','');
-    loginBtn?.removeAttribute('hidden');
-  }
-  logoutBtn?.addEventListener('click', ()=>{ pb.authStore.clear(); location.href='./index.html'; });
+  const refresh = ()=>{ const u = getUserSync(); if(u){ loginBtn?.setAttribute('hidden',''); logoutBtn?.removeAttribute('hidden'); } else { logoutBtn?.setAttribute('hidden',''); loginBtn?.removeAttribute('hidden'); } };
+  refresh();
+  sb.auth.onAuthStateChange(()=> refresh());
+  logoutBtn?.addEventListener('click', async ()=>{ await sb.auth.signOut(); location.href='./index.html'; });
+}
+
+// Storage helpers
+export const IMAGES_BUCKET = 'images';
+export function imageUrl(path){ if(!path) return ''; const { data } = sb.storage.from(IMAGES_BUCKET).getPublicUrl(path); return data?.publicUrl || ''; }
+export async function uploadImage(path, file){ return sb.storage.from(IMAGES_BUCKET).upload(path, file, { upsert: true, contentType: file?.type||'application/octet-stream' }); }
+
+// Realtime helper
+export function subscribeTable(table, filter, handler){
+  const chan = sb.channel(`realtime:${table}:${Math.random().toString(36).slice(2)}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table, filter }, payload => handler(payload))
+    .subscribe();
+  return ()=>{ try{ sb.removeChannel(chan); }catch{} };
 }

@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="supabase-url" content="https://xrpsysmgyhnjpztgervr.supabase.co" />
+  <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycHN5c21neWhuanB6dGdlcnZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NTcwMTgsImV4cCI6MjA3MzQzMzAxOH0.sLFqsvbQSXdtzgvH-bMsTuItL8K_FMUl0_Y4gtG7iXQ" />
   <meta name="pocketbase-url" content="https://web-production-1f8b.up.railway.app" />
   <meta http-equiv="x-ua-compatible" content="ie=edge" />
   <title>SastraDaily</title>
@@ -85,39 +87,61 @@
   </main>
 
   <script type="module">
-    import { pb, $, initTheme, makeAvatarFromEmail, dataUrlToBlob } from './js/shared.js';
+    import { sb, $, initTheme, makeAvatarFromEmail, dataUrlToBlob, uploadImage, IMAGES_BUCKET } from './js/shared.js';
     initTheme();
     const err = $('#authPageError');
+    const avatarPathFor = (uid)=> `avatars/${uid}.png`;
+
     $('#authLogin')?.addEventListener('click', async ()=>{
       const email = $('#authEmail').value.trim().toLowerCase();
       const password = $('#authPassword').value;
       err.hidden=true;
-      try{ await pb.collection('users').authWithPassword(email, password); location.href = './feed.html'; }
-      catch(ex){ err.textContent = ex?.message||'Login failed'; err.hidden=false; }
+      try{
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if(error) throw error;
+        location.href = './feed.html';
+      } catch(ex){ err.textContent = ex?.message||'Login failed'; err.hidden=false; }
     });
+
     $('#authSignup')?.addEventListener('click', async ()=>{
       const email = $('#authEmail').value.trim().toLowerCase();
       const password = $('#authPassword').value;
       const username = $('#authUsername')?.value.trim();
       err.hidden=true;
       try{
-        const base = { email, password, passwordConfirm: password, bio: "Hey there! I'm using SastraDaily." };
+        // Attempt sign up
+        const res = await sb.auth.signUp({ email, password });
+        if(res.error) throw res.error;
+        let session = res.data?.session || null;
+        // If confirmations are OFF, session will be returned here. Otherwise, sign in now.
+        if(!session){
+          const res2 = await sb.auth.signInWithPassword({ email, password });
+          if(res2.error) throw res2.error;
+          session = res2.data?.session || null;
+        }
+        const userId = session?.user?.id || res.data?.user?.id;
+        if(!userId) throw new Error('Signup failed: no user session');
+
+        // Upsert profile row AFTER session exists (RLS requirements)
+        const base = { id: userId, email, bio: "Hey there! I'm using SastraDaily." };
         if(username) base.username = username;
-        const rec = await pb.collection('users').create(base);
-        // Generate a default avatar based on email and upload it
+        await sb.from('profiles').upsert(base, { onConflict: 'id' });
+
+        // Generate and upload default avatar (best-effort)
         try{
           const dataUrl = await makeAvatarFromEmail(email);
           const blob = await dataUrlToBlob(dataUrl);
-          const fd = new FormData();
-          fd.append('avatar', blob, 'avatar.png');
-          await pb.collection('users').update(rec.id, fd);
+          const path = avatarPathFor(userId);
+          await uploadImage(path, blob);
+          await sb.from('profiles').update({ avatar_url: path }).eq('id', userId);
         }catch{}
-        await pb.collection('users').authWithPassword(email, password);
+
+        // Done
         location.href = './feed.html';
       }catch(ex){ err.textContent = ex?.message||'Signup failed'; err.hidden=false; }
     });
     // If already authed, go straight to feed
-    if(pb.authStore.model){ location.href = './feed.html'; }
+    try{ const { data } = await sb.auth.getUser(); if(data?.user) location.href = './feed.html'; }catch{}
   </script>
 </body>
 </html>
