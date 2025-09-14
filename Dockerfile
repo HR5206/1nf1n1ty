@@ -13,9 +13,9 @@ RUN wget -O /tmp/pocketbase.zip "https://github.com/pocketbase/pocketbase/releas
     && chmod +x /usr/local/bin/pocketbase
 
 # Data directory for database and uploads (attach a Railway Volume to /data)
-RUN mkdir -p /data \
+RUN mkdir -p /data /pocketbase/pb_data \
     && adduser -D -u 10001 appuser \
-    && chown -R 10001:10001 /data
+    && chown -R 10001:10001 /data /pocketbase
 
 # Ensure working directory contains the pocketbase binary so a Start Command like
 # `./pocketbase serve ...` also works if Railway overrides CMD
