@@ -15,8 +15,12 @@ RUN wget -O /tmp/pocketbase.zip "https://github.com/pocketbase/pocketbase/releas
 # Data directory for database and uploads (attach a Railway Volume to /data)
 RUN mkdir -p /data
 
+# Ensure working directory contains the pocketbase binary so a Start Command like
+# `./pocketbase serve ...` also works if Railway overrides CMD
+WORKDIR /usr/local/bin
+
 # Railway sets PORT; default to 8080 locally
 EXPOSE 8080
 
 # Start PocketBase; bind to provided PORT and use /data for persistence
-CMD ["/bin/sh", "-lc", "/usr/local/bin/pocketbase serve --http=0.0.0.0:${PORT:-8080} --dir=/data"]
+CMD ["/bin/sh", "-lc", "./pocketbase serve --http=0.0.0.0:${PORT:-8080} --dir=/data"]
