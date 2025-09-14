@@ -89,14 +89,14 @@ Note: PocketBase rule language: https://pocketbase.io/docs/collections-rules/
 ## 4) Client SDK
 You don’t need to add any extra script tag. This project already imports the ESM build inside `script.pocketbase.js`:
 ```js
-import PocketBase from 'https://unpkg.com/pocketbase@0.21.3/dist/pocketbase.es.mjs';
+import PocketBase from 'https://unpkg.com/pocketbase@0.22.21/dist/pocketbase.es.mjs';
 ```
 
 Notes:
 - Don’t load `pocketbase.umd.js` with `type="module"` — UMD is not an ES module and will fail.
 - If you prefer the UMD global in another project, use:
   ```html
-  <script src="https://unpkg.com/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+  <script src="https://unpkg.com/pocketbase@0.22.21/dist/pocketbase.umd.js"></script>
   ```
   and then: `const pb = new window.PocketBase('http://127.0.0.1:8090')`. This is NOT needed here.
 
