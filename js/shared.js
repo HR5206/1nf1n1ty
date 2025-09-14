@@ -97,7 +97,13 @@ export function initNavAuthControls(){
 
 // Storage helpers
 export const IMAGES_BUCKET = 'images';
-export function imageUrl(path){ if(!path) return ''; const { data } = sb.storage.from(IMAGES_BUCKET).getPublicUrl(path); return data?.publicUrl || ''; }
+export function imageUrl(path, opts){
+  if(!path) return '';
+  const { data } = sb.storage.from(IMAGES_BUCKET).getPublicUrl(path);
+  let url = data?.publicUrl || '';
+  if(opts?.bust){ url += (url.includes('?') ? '&' : '?') + 't=' + Date.now(); }
+  return url;
+}
 export async function uploadImage(path, file){ return sb.storage.from(IMAGES_BUCKET).upload(path, file, { upsert: true, contentType: file?.type||'application/octet-stream' }); }
 
 // Realtime helper

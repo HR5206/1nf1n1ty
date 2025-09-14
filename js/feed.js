@@ -13,7 +13,7 @@ async function buildPostElement(p){
   const li = document.createElement('li'); li.className='post'; li.dataset.id=p.id;
   const author = p.profiles || p.profile || p.user;
   let avatarUrl = 'https://placehold.co/64x64';
-  if(author?.avatar_url){ avatarUrl = imageUrl(author.avatar_url); }
+  if(author?.avatar_url){ avatarUrl = imageUrl(author.avatar_url, { bust: true }); }
   const when = toDate(p.created_at || p.created).toLocaleString();
   const mediaUrl = p.image_path ? imageUrl(p.image_path) : '';
   li.innerHTML = `

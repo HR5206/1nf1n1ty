@@ -99,7 +99,7 @@ document.getElementById('authSignup')?.addEventListener('click', async (e)=>{
     const avatarRef = sRef(storage, `avatars/${uid}.png`);
     await uploadString(avatarRef, avatarData, 'data_url');
     const avatar_url = await getDownloadURL(avatarRef);
-    await setUserDoc(uid, { email, bio: "Hey there! I'm using SastraDaily.", avatar_url, created_at: serverTimestamp() });
+  await setUserDoc(uid, { email, bio: "Hey there! I'm using 1nf1n1ty Social Media App.", avatar_url, created_at: serverTimestamp() });
   }catch(ex){ err.textContent = ex?.message||'Signup failed'; err.hidden=false; }
 });
 document.getElementById('authPageForm')?.addEventListener('submit', (e)=>{ e.preventDefault(); document.getElementById('authLogin')?.click(); });
@@ -259,7 +259,7 @@ document.getElementById('saveProfile')?.addEventListener('click', async ()=>{
   const f = document.getElementById('avatarInput').files?.[0];
   let avatar_url = me.avatar_url;
   if(f){ const blob = await compressImage(f, 512, 0.9); const r=sRef(storage, `avatars/${me.uid}.jpg`); await uploadBytes(r, blob, { contentType: 'image/jpeg', cacheControl: '31536000' }); avatar_url = await getDownloadURL(r); }
-  await setUserDoc(me.uid, { bio: bio || "Hey there! I'm using SastraDaily.", avatar_url });
+  await setUserDoc(me.uid, { bio: bio || "Hey there! I'm using 1nf1n1ty Social Media App.", avatar_url });
   const profile = await getUserDoc(me.uid); me = { ...me, ...profile };
   await renderProfile();
 });
@@ -268,7 +268,7 @@ async function renderProfile(){
   if(!me) return;
   const p = await getUserDoc(me.uid);
   document.getElementById('profileEmail').textContent = me.email;
-  document.getElementById('profileBio').textContent = p?.bio || "Hey there! I'm using SastraDaily.";
+  document.getElementById('profileBio').textContent = p?.bio || "Hey there! I'm using 1nf1n1ty Social Media App.";
   const img = document.getElementById('profileAvatar');
   img.src = p?.avatar_url || await makeAvatarFromEmail(me.email);
   // my posts grid

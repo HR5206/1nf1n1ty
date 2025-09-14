@@ -6,16 +6,16 @@
   <meta name="supabase-url" content="https://xrpsysmgyhnjpztgervr.supabase.co" />
   <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycHN5c21neWhuanB6dGdlcnZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NTcwMTgsImV4cCI6MjA3MzQzMzAxOH0.sLFqsvbQSXdtzgvH-bMsTuItL8K_FMUl0_Y4gtG7iXQ" />
   <meta name="pocketbase-url" content="https://web-production-1f8b.up.railway.app" />
-  <title>Team 1nf1nty • Profile</title>
+  <title>SastraDaily • Profile</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./styles.css" />
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
 </head>
 <body>
   <header class="app-header">
-  <div class="brand"><img class="brand-logo" src="./1nf1n1ty-footer.webp" alt="1nf1n1ty logo" loading="eager" fetchpriority="high" onerror="this.onerror=null;this.src='./assets/icon.svg'" /></div>
+    <div class="brand"><img src="./assets/icon.svg" alt="Team 1nf1n1ty" width="28" height="28"/><span>Team 1nf1n1ty</span></div>
     <nav class="nav">
       <a class="nav-btn" href="./feed.html">Feed</a>
       <a class="nav-btn" href="./profile.html">Profile</a>
@@ -40,8 +40,8 @@
       </div>
       <div class="row stats"><span><strong id="statPosts">0</strong> posts</span></div>
       <div class="row" style="flex-wrap:wrap;gap:8px">
-        <input type="text" id="usernameInput" placeholder="Update username" maxlength="30" style="min-width:220px;flex:1" />
-        <input type="text" id="bioInput" placeholder="Update your bio" maxlength="160" style="min-width:260px;flex:2" />
+  <input type="text" id="usernameInput" class="pill-input" placeholder="Update username" maxlength="30" style="min-width:220px;flex:1" />
+  <input type="text" id="bioInput" class="pill-input" placeholder="Update your bio" maxlength="160" style="min-width:260px;flex:2" />
         <button class="btn gradient" id="saveProfile">Save</button>
       </div>
     </section>

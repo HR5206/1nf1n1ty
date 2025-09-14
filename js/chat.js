@@ -1,4 +1,4 @@
-import { sb, $, $$, initTheme, ensureAuthedOrRedirect, displayName, initNavAuthControls, subscribeTable, imageUrl, escapeHTML } from './shared.js';
+import { sb, $, $$, initTheme, ensureAuthedOrRedirect, displayName, initNavAuthControls, subscribeTable, imageUrl } from './shared.js';
 
 initTheme();
 initNavAuthControls();
@@ -20,10 +20,10 @@ function subscribeUsers(){
   if(unsubUsers){ try{unsubUsers()}catch{} unsubUsers=null; }
   const render = async ()=>{
     if(!me){ friendsList.innerHTML=''; return; }
-    const { data: users } = await sb.from('profiles').select('id, username, email, avatar_url');
+  const { data: users } = await sb.from('profiles').select('id, username, email, avatar_url');
     const others = (users||[]).filter(u=> u.id !== me.id);
     friendsList.innerHTML = others.map(u=>{
-      const av = u.avatar_url? imageUrl(u.avatar_url) : 'https://placehold.co/48x48';
+      const av = u.avatar_url? imageUrl(u.avatar_url, { bust: true }) : 'https://placehold.co/48x48';
       const name = displayName(u);
       return `<li class="friend" data-id="${u.id}" data-email="${u.email||''}" data-username="${u.username||''}"><div class="avatar-wrap"><img class="avatar" src="${av}" alt=""/></div><div class="meta"><span class="name">${name}</span></div></li>`;
     }).join('');
@@ -49,12 +49,7 @@ function subscribeChat(){
   const filter = `room=eq.${room}`;
   const handler = async ()=>{
     const { data: msgs } = await sb.from('messages').select('id, text, sender, receiver, created_at').eq('room', room).order('created_at', { ascending: true });
-    chatList.innerHTML = msgs.map(m=> {
-      const mine = m.sender === me.id;
-      const text = escapeHTML(m.text||'');
-      const delBtn = mine ? `<button class="msg-del" title="Delete" data-del="${m.id}">🗑</button>` : '';
-      return `<li class="message ${mine?'out':'in'}" data-mid="${m.id}"><span class="msg-text">${text}</span> ${delBtn}</li>`;
-    }).join('');
+    chatList.innerHTML = msgs.map(m=> `<li class="message ${m.sender===me.id?'out':'in'}">${(m.text||'')}</li>`).join('');
     chatList.scrollTop = chatList.scrollHeight;
   };
   handler();
@@ -68,29 +63,6 @@ chatForm?.addEventListener('submit', async (e)=>{
   const room = roomId(me.id, currentPeer.id);
   await sb.from('messages').insert({ room, text, sender: me.id, receiver: currentPeer.id });
   chatInput.value='';
-});
-
-// Delete message (only own messages show the button)
-chatList?.addEventListener('click', async (e)=>{
-  const btn = e.target.closest('[data-del]');
-  if(!btn) return;
-  const id = btn.getAttribute('data-del');
-  if(!id) return;
-  const ok = confirm('Delete this message?');
-  if(!ok) return;
-  try{
-    btn.setAttribute('disabled','');
-    // Only allow deleting messages sent by me (RLS should also enforce this)
-    await sb.from('messages').delete().eq('id', id).eq('sender', me.id);
-    // Optimistic UI removal (realtime will also refresh)
-    const li = document.querySelector(`.message[data-mid="${id}"]`);
-    li?.remove();
-  }catch(ex){
-    console.error('Delete message failed', ex);
-    alert(ex?.message || 'Failed to delete message');
-  }finally{
-    btn.removeAttribute('disabled');
-  }
 });
 
 subscribeUsers();

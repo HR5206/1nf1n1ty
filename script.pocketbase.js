@@ -87,7 +87,7 @@ $('#authSignup')?.addEventListener('click', async ()=>{
   let username = sanitizeUsername(rawUsername.trim());
   const err = $('#authPageError'); err.hidden=true;
   try{
-    const base = { email, password, passwordConfirm: password, bio: "Hey there! I'm using SastraDaily." };
+  const base = { email, password, passwordConfirm: password, bio: "Hey there! I'm using 1nf1n1ty Social Media App." };
     if(username) base.username = username; // persist only if user provided one
     const rec = await pb.collection('users').create(base);
     // Authenticate first (required for Update rule @request.auth.id = id)
@@ -287,7 +287,7 @@ $('#saveProfile')?.addEventListener('click', async ()=>{
   const bio = $('#bioInput').value.trim();
   const username = sanitizeUsername($('#usernameInput')?.value.trim());
   const f = $('#avatarInput').files?.[0];
-  const data = { bio: bio || "Hey there! I'm using SastraDaily." };
+  const data = { bio: bio || "Hey there! I'm using 1nf1n1ty Social Media App." };
   if(username) data.username = username;
   if(f){ const blob = await compressImage(f, 512, 0.9); data.avatar = blob; }
   await pb.collection('users').update(me.id, data);
@@ -301,7 +301,7 @@ async function renderProfile(){
   if(!isAuthed()) return;
   me = await pb.collection('users').getOne(me.id);
   $('#profileEmail').textContent = me.email;
-  $('#profileBio').textContent = me.bio || "Hey there! I'm using SastraDaily.";
+  $('#profileBio').textContent = me.bio || "Hey there! I'm using 1nf1n1ty Social Media App.";
   const usernameInput = $('#usernameInput'); if(usernameInput) usernameInput.value = me.username || '';
   const img = $('#profileAvatar');
   img.src = me.avatar ? pb.files.getUrl(me, me.avatar) : await makeAvatarFromEmail(me.email);

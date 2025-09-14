@@ -37,13 +37,13 @@ $('#saveProfile')?.addEventListener('click', async ()=>{
       const blob = await compressImage(f, 512, 0.9) || f;
       const path = `avatars/${me.id}.jpg`;
       await uploadImage(path, blob);
-  await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using Team 1nf1nty.", username: username||null, avatar_url: path }, { onConflict: 'id' });
+  await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using 1nf1n1ty Social Media App.", username: username||null, avatar_url: path }, { onConflict: 'id' });
     }else{
-  await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using Team 1nf1nty.", username: username||null }, { onConflict: 'id' });
+  await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using 1nf1n1ty Social Media App.", username: username||null }, { onConflict: 'id' });
     }
     // Optimistically reflect changes
     if(username) $('#profileUsername').textContent = username;
-  $('#profileBio').textContent = bio || "Hey there! I'm using Team 1nf1nty.";
+  $('#profileBio').textContent = bio || "Hey there! I'm using 1nf1n1ty Social Media App.";
     await renderProfile();
   }catch(ex){
     console.error('Failed to update profile', ex);
@@ -54,7 +54,7 @@ $('#saveProfile')?.addEventListener('click', async ()=>{
 // Live preview for bio while typing
 $('#bioInput')?.addEventListener('input', (e)=>{
   const v = (e.target?.value || '').trim();
-  $('#profileBio').textContent = v || "Hey there! I'm using SastraDaily.";
+  $('#profileBio').textContent = v || "Hey there! I'm using 1nf1n1ty Social Media App.";
 });
 
 async function renderProfile(){
@@ -62,11 +62,15 @@ async function renderProfile(){
   // Header details
   $('#profileUsername').textContent = displayName(user);
   $('#profileEmail').textContent = user?.email || me.email;
-  $('#profileBio').textContent = (user?.bio) || "Hey there! I'm using Team 1nf1nty.";
+  $('#profileBio').textContent = (user?.bio) || "Hey there! I'm using 1nf1n1ty Social Media App.";
   const usernameInput = $('#usernameInput'); if(usernameInput) usernameInput.value = user.username || '';
   const bioInput = $('#bioInput'); if(bioInput) bioInput.value = user?.bio || '';
   const img = $('#profileAvatar');
-  img.src = user?.avatar_url ? imageUrl(user.avatar_url) : 'https://placehold.co/120x120?text=' + encodeURIComponent((user?.email||me.email||'?').charAt(0).toUpperCase());
+  if (user?.avatar_url) {
+    img.src = imageUrl(user.avatar_url, { bust: true });
+  } else {
+    img.src = 'https://placehold.co/120x120?text=' + encodeURIComponent((user?.email||me.email||'?').charAt(0).toUpperCase());
+  }
   // Posts grid
   const { data: posts } = await sb.from('posts').select('id, image_path').eq('user_id', me.id).order('created_at', { ascending: false });
   const grid = $('#profileGrid');
