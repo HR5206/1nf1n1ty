@@ -14,7 +14,8 @@ async function buildPostElement(p){
   const author = p.profiles || p.profile || p.user;
   let avatarUrl = 'https://placehold.co/64x64';
   if(author?.avatar_url){
-    avatarUrl = imageUrl(author.avatar_url, { bust: true });
+    // Avoid cache-busting avatars to leverage browser/CDN cache on slow connections
+    avatarUrl = imageUrl(author.avatar_url);
   }
   const when = toDate(p.created_at || p.created).toLocaleString();
   const img = p.image_path ? imageUrl(p.image_path) : null;
@@ -55,7 +56,11 @@ function cleanup(){
 function subscribeLikes(postId){
   if(unsubLikes.has(postId)){ try{unsubLikes.get(postId)()}catch{} }
   const handler = async ()=>{
-    const { data: list } = await sb.from('likes').select('user_id').eq('post_id', postId);
+    // Lightweight: use head count for totals and a tiny query for my like
+    let list = [];
+    let total = 0;
+    try{ const { count } = await sb.from('likes').select('id', { count: 'exact', head: true }).eq('post_id', postId); total = count||0; }catch{}
+    if(me){ try{ const { data: ex } = await sb.from('likes').select('user_id').eq('post_id', postId).eq('user_id', me.id).limit(1); list = ex||[]; }catch{} }
     const likeBtn = document.querySelector(`[data-like="${postId}"]`);
     const likesDiv = document.querySelector(`[data-likes="${postId}"]`);
     const liked = !!(me && list?.some(l=> l.user_id === me.id));
@@ -63,7 +68,7 @@ function subscribeLikes(postId){
       likeBtn.textContent = liked? '❤️ Liked' : '❤️ Like';
       likeBtn.classList.toggle('active', !!liked);
     }
-    const n = list?.length||0; if(likesDiv){ likesDiv.textContent = n? `${n} ${n===1?'like':'likes'}` : ''; }
+    const n = total||0; if(likesDiv){ likesDiv.textContent = n? `${n} ${n===1?'like':'likes'}` : ''; }
   };
   handler();
   unsubLikes.set(postId, subscribeTable('likes', `post_id=eq.${postId}`, handler));
@@ -72,8 +77,13 @@ function subscribeLikes(postId){
 function subscribeComments(postId, firstN=null){
   if(unsubComments.has(postId)){ try{unsubComments.get(postId)()}catch{} }
   const handler = async ()=>{
-    const { data: list } = await sb.from('comments').select('id, text, created_at, user_id, profiles(*)').eq('post_id', postId).order('created_at', { ascending: true });
-    const items = firstN? (list||[]).slice(0, firstN) : (list||[]);
+    // Fetch only what we need for inline view
+    const { data: items } = await sb
+      .from('comments')
+      .select('id, text, created_at, user_id, profiles(id, username, email, avatar_url, bio)')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true })
+      .limit(firstN||2);
     const ul = document.getElementById(`c_${postId}`);
     const countEl = document.getElementById(`cm_${postId}`);
     if(ul){
@@ -84,7 +94,8 @@ function subscribeComments(postId, firstN=null){
       }).join('');
       ul.innerHTML = html;
     }
-    const total = list?.length || 0;
+    // Get total count without rows
+    let total = 0; try{ const { count } = await sb.from('comments').select('id', { count: 'exact', head: true }).eq('post_id', postId); total = count||0; }catch{}
     if(countEl){ countEl.textContent = total ? `View all ${total} ${total===1?'comment':'comments'}` : ''; countEl.style.visibility = total? 'visible' : 'hidden'; }
   };
   handler();
@@ -96,7 +107,11 @@ async function loadAndRenderFeed(){
   for(const [,u] of unsubLikes){ try{u()}catch{} } unsubLikes.clear();
   for(const [,u] of unsubComments){ try{u()}catch{} } unsubComments.clear();
   list.innerHTML='';
-  const { data: items } = await sb.from('posts').select('id, caption, image_path, created_at, user_id, profiles(*)').order('created_at', { ascending: false }).limit(FEED_PAGE);
+  const { data: items } = await sb
+    .from('posts')
+    .select('id, caption, image_path, created_at, user_id, profiles(id, username, email, avatar_url, bio)')
+    .order('created_at', { ascending: false })
+    .limit(FEED_PAGE);
   for(const p of (items||[])){
     const li = await buildPostElement(p);
     list.appendChild(li);
@@ -105,11 +120,21 @@ async function loadAndRenderFeed(){
   }
 }
 
+// Debounced reload to reduce chatter on low bandwidth
+let __feedReloadTimer = null;
+function scheduleFeedReload(){
+  if(__feedReloadTimer){ clearTimeout(__feedReloadTimer); }
+  __feedReloadTimer = setTimeout(()=>{ loadAndRenderFeed().catch(()=>{}); __feedReloadTimer=null; }, 500);
+}
+
 function subscribeFeed(){
   const list = $('#feedList'); if(!list) return;
   if(unsubPosts){ try{unsubPosts()}catch{} unsubPosts=null; }
-  loadAndRenderFeed();
-  unsubPosts = subscribeTable('posts', '', ()=> loadAndRenderFeed());
+  scheduleFeedReload();
+  unsubPosts = subscribeTable('posts', '', (payload)=>{
+    const ev = payload?.eventType;
+    if(ev === 'INSERT' || ev === 'UPDATE' || ev === 'DELETE') scheduleFeedReload();
+  });
 }
 
 // Removed carousel logic for single-image posts

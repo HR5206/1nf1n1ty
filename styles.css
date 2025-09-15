@@ -800,6 +800,15 @@ html.dark .comment-input .btn:hover{ background:#d70b4d; color:#ffffff; box-shad
 .friend:hover {
 	background: rgba(255,255,255,.06);
 }
+/* Subtle highlight when a new message/contact appears */
+.friend.highlight {
+  animation: friendHighlight 1.4s ease-out;
+}
+@keyframes friendHighlight {
+  0%   { box-shadow: 0 0 0 0 rgba(215,11,77,0.6); background: rgba(215,11,77,0.14); }
+  60%  { box-shadow: 0 0 0 10px rgba(215,11,77,0.0); background: rgba(215,11,77,0.08); }
+  100% { box-shadow: none; background: transparent; }
+}
 .friend .meta {
 	display: flex;
 	flex-direction: column;

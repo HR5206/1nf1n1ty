@@ -16,12 +16,16 @@
 <body>
   <header class="app-header">
   <div class="brand"><a href="./logo-redirect.html" aria-label="Team 1nf1n1ty homepage"><img id="siteLogo" class="site-logo" src="./assets/1nf1n1ty.webp" alt="Logo" /></a></div>
-    <nav class="nav">
-      <a class="nav-btn" href="./feed.html">Feed</a>
+    <nav id="siteNav" class="nav" role="navigation">
+      <a class="nav-btn" href="./feed.html" aria-current="page">Feed</a>
       <a class="nav-btn" href="./profile.html">Profile</a>
       <a class="nav-btn" href="./chat.html">Chat</a>
     </nav>
-    <div class="actions"><button id="themeToggle" title="Toggle theme" class="btn">🌓</button><div id="authActions"><button id="loginBtn" class="btn gradient" onclick="location.href='./index.html'">Login</button><button id="logoutBtn" class="btn" hidden>Logout</button></div></div>
+    <div class="actions">
+      <button id="navToggle" class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="siteNav">☰</button>
+      <button id="themeToggle" title="Toggle theme" class="btn">🌓</button>
+      <div id="authActions"><button id="loginBtn" class="btn gradient" onclick="location.href='./index.html'">Login</button><button id="logoutBtn" class="btn" hidden>Logout</button></div>
+    </div>
   </header>
   <main id="app" class="app-root">
     <div class="feed-layout">

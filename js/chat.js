@@ -11,11 +11,7 @@ const chatHeader = $('#chatHeader');
 const chatList = $('#chatList');
 const chatInput = $('#chatInput');
 const chatForm = $('#chatForm');
-const newChatBtn = $('#newChat');
-const userPicker = $('#userPicker');
-const userPickerList = $('#userPickerList');
-const userSearch = $('#userSearch');
-const closeUserPicker = $('#closeUserPicker');
+const sidebarSearch = $('#sidebarSearch');
 
 function roomId(a, b){ const arr=[a,b].sort(); return `dm:${arr[0]}::${arr[1]}`; }
 
@@ -24,14 +20,13 @@ let allUsersCache = [];
 // Namespace contacts per user to avoid cross-account mixing in localStorage
 const CONTACTS_KEY = me ? `sd_chat_contacts:${me.id}` : 'sd_chat_contacts';
 let existingPeerIds = new Set();
-let pickerBase = [];
 // Unread tracking (per user) using last-read timestamps per peerId in localStorage
 const LAST_READ_KEY = me ? `sd_chat_last_read:${me.id}` : 'sd_chat_last_read';
 let lastRead = {};
 try{ lastRead = JSON.parse(localStorage.getItem(LAST_READ_KEY)||'{}'); }catch{ lastRead = {}; }
 const unreadCounts = Object.create(null); // { [peerId]: number }
 function saveLastRead(){ try{ localStorage.setItem(LAST_READ_KEY, JSON.stringify(lastRead||{})); }catch{} }
-function markConversationRead(peerId, ts){ if(!peerId) return; lastRead[peerId] = ts || new Date().toISOString(); saveLastRead(); unreadCounts[peerId]=0; renderContacts(loadContacts()); }
+function markConversationRead(peerId, ts){ if(!peerId) return; lastRead[peerId] = ts || new Date().toISOString(); saveLastRead(); unreadCounts[peerId]=0; renderAllUsers(allUsersCache); }
 async function recomputeUnreadForPeer(peerId){
   if(!peerId || !me) return 0;
   const since = lastRead[peerId] || '1970-01-01T00:00:00.000Z';
@@ -48,11 +43,11 @@ async function recomputeUnreadForPeer(peerId){
   }catch{ unreadCounts[peerId]=0; return 0; }
 }
 async function recomputeAllUnreadCounts(){
-  const contacts = loadContacts();
-  for(const c of (contacts||[])){
-    await recomputeUnreadForPeer(c.id);
+  const users = allUsersCache || [];
+  for(const u of (users||[])){
+    await recomputeUnreadForPeer(u.id);
   }
-  renderContacts(contacts);
+  renderAllUsers(users);
 }
 function sanitizeContacts(list){
   const arr = Array.isArray(list)? list : [];
@@ -123,23 +118,52 @@ function upsertContact(user){
   if(i>=0) list[i] = { ...list[i], ...base };
   else list.unshift(base);
   saveContacts(list);
-  renderContacts(list);
+  renderAllUsers(allUsersCache);
+}
+
+// Briefly highlight a contact in the list (visual notification without toast)
+function highlightContact(peerId){
+  try{
+    const li = friendsList?.querySelector?.(`[data-id="${peerId}"]`);
+    if(li){
+      li.classList.add('highlight');
+      setTimeout(()=> li.classList.remove('highlight'), 1400);
+    }
+  }catch{}
 }
 function renderContacts(list){
   const arr = sanitizeContacts(list || loadContacts());
   // Also ensure current user is excluded from UI rendering, as a safety net
   const filtered = (arr||[]).filter(u=> String(u.id) !== String(me?.id||''));
   if(!filtered || filtered.length===0){
-    friendsList.innerHTML = '<li class="muted">No conversations yet. Click New to start one.</li>';
+    friendsList.innerHTML = '<li class="muted">No users</li>';
     return;
   }
   friendsList.innerHTML = (filtered||[]).map(u=>{
     const full = allUsersCache.find(x=> String(x.id) === String(u.id)) || u;
-    const av = full.avatar_url? imageUrl(full.avatar_url, { bust: true }) : 'https://placehold.co/48x48';
+    const av = full.avatar_url? imageUrl(full.avatar_url) : 'https://placehold.co/48x48';
     const name = displayName(full);
     const unread = unreadCounts[full.id]||0;
     const badge = unread>0 ? `<span class="badge" aria-label="${unread} unread">${unread}</span>` : '';
     return `<li class="friend" data-id="${full.id}" data-email="${full.email||''}" data-username="${full.username||''}"><div class="avatar-wrap"><img class="avatar" src="${av}" alt=""/></div><div class="meta"><span class="name">${name} ${infinityBadge(full)}</span></div>${badge}</li>`;
+  }).join('');
+}
+
+// Render the full user directory (excluding me), filtered by sidebar search
+function renderAllUsers(users){
+  const base = (users||[]).filter(u=> String(u.id) !== String(me?.id||''));
+  const q = (sidebarSearch?.value||'').trim().toLowerCase();
+  const arr = q ? base.filter(u=>{
+    const name = (displayName(u)||'').toLowerCase();
+    return (u.username||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q) || name.includes(q);
+  }) : base;
+  if(!arr.length){ friendsList.innerHTML = '<li class="muted">No users</li>'; return; }
+  friendsList.innerHTML = arr.map(u=>{
+    const av = u.avatar_url? imageUrl(u.avatar_url) : 'https://placehold.co/48x48';
+    const name = displayName(u);
+    const unread = unreadCounts[u.id]||0;
+    const badge = unread>0 ? `<span class="badge" aria-label="${unread} unread">${unread}</span>` : '';
+    return `<li class="friend" data-id="${u.id}" data-email="${u.email||''}" data-username="${u.username||''}"><div class="avatar-wrap"><img class="avatar" src="${av}" alt=""/></div><div class="meta"><span class="name">${name} ${infinityBadge(u)}</span></div>${badge}</li>`;
   }).join('');
 }
 
@@ -149,8 +173,25 @@ function subscribeUsers(){
     if(!me){ friendsList.innerHTML=''; return; }
   const { data: users } = await sb.from('profiles').select('id, username, email, avatar_url, bio');
     allUsersCache = (users||[]).filter(u=> u.id !== me.id);
-    // Keep rendering contacts list in sidebar
-    renderContacts(loadContacts());
+    // Prune contacts that no longer exist in profiles (deleted users)
+    try{
+      const existingIds = new Set((users||[]).map(u=> String(u.id)));
+      const contacts = loadContacts();
+      const pruned = contacts.filter(c=> existingIds.has(String(c.id)));
+      if(pruned.length !== contacts.length){
+        saveContacts(pruned);
+        // If currently chatting with a removed user, reset the chat pane
+        if(currentPeer && !existingIds.has(String(currentPeer.id))){
+          currentPeer = null;
+          chatHeader.innerHTML = 'Select a conversation';
+          chatList.innerHTML = '';
+          if(chatInput){ chatInput.placeholder = 'Message...'; }
+        }
+      }
+    }catch{}
+    // Render the full user directory in the sidebar (with search)
+    renderAllUsers(allUsersCache);
+    await recomputeAllUnreadCounts();
   };
   render();
   unsubUsers = subscribeTable('profiles', '', render);
@@ -225,7 +266,6 @@ chatList?.addEventListener('click', async (e)=>{
 
 subscribeUsers();
 await refreshExistingPeers();
-await hydrateContactsFromIncoming?.();
 await recomputeAllUnreadCounts();
 
 // Build the set of peers you've already chatted with (either direction)
@@ -242,80 +282,8 @@ async function refreshExistingPeers(){
   }catch{ existingPeerIds = new Set(); }
 }
 
-// Ensure any past incoming senders appear in contacts so the receiver sees the chat without manual add
-async function hydrateContactsFromIncoming(){
-  if(!me) return;
-  try{
-    const resetAt = localStorage.getItem('sd_chat_contacts_reset_at');
-    let q = sb.from('messages').select('sender, created_at').eq('receiver', me.id);
-    if(resetAt){ q = q.gt('created_at', resetAt); }
-    const { data: msgs } = await q;
-    const uniqueSenders = Array.from(new Set((msgs||[]).map(m=> m.sender).filter(Boolean)));
-    if(!uniqueSenders.length) return;
-    const contacts = loadContacts();
-    const have = new Set((contacts||[]).map(c=> String(c.id)));
-    const toAdd = uniqueSenders.filter(id=> !have.has(String(id)) && String(id)!==String(me.id));
-    if(!toAdd.length) return;
-    const { data: profs } = await sb.from('profiles').select('id, username, email, avatar_url, bio').in('id', toAdd);
-    const list = Array.isArray(profs)? profs : toAdd.map(id=> ({ id }));
-    for(const u of list){ upsertContact(u); }
-  }catch{}
-}
-
-// Removed past hydration: keep lists empty until user adds new contacts or receives new messages
-
-// New chat button opens user picker
-newChatBtn?.addEventListener('click', async ()=>{
-  await refreshExistingPeers();
-  // Compute candidates: users not in contacts. We allow users with prior messages; the chat list is still empty until user adds.
-  const contacts = loadContacts();
-  const contactIds = new Set((contacts||[]).map(c=> c.id));
-  // Explicitly exclude current user as a safety net
-  pickerBase = allUsersCache.filter(u=> String(u.id) !== String(me.id) && (u.email||'') !== (me.email||'') && !contactIds.has(u.id));
-  // Initial render without filter
-  userPickerList.innerHTML = pickerBase.length ? pickerBase.map(u=>{
-    const av = u.avatar_url? imageUrl(u.avatar_url, { bust: true }) : 'https://placehold.co/48x48';
-    const name = displayName(u);
-    return `<li class="friend" data-pick-id="${u.id}"><div class="avatar-wrap"><img class="avatar" src="${av}" alt=""/></div><div class="meta"><span class="name">${name} ${infinityBadge(u)}</span><span class="last" style="font-size:.9em">${u.email||''}</span></div></li>`;
-  }).join('') : '<li class="muted">No users available</li>';
-  userPicker?.showModal();
-  userSearch?.focus();
-});
-
-closeUserPicker?.addEventListener('click', ()=> userPicker?.close());
-
-// Filter users in picker
-userSearch?.addEventListener('input', ()=>{
-  const q = userSearch.value.trim().toLowerCase();
-  const base = pickerBase || [];
-  const filtered = q ? base.filter(u=> {
-    const name = (displayName(u)||'').toLowerCase();
-    // Exclude current user and match query
-    if(String(u.id) === String(me.id) || (u.email||'') === (me.email||'')) return false;
-    return (u.username||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q) || name.includes(q);
-  }) : base.filter(u=> String(u.id) !== String(me.id) && (u.email||'') !== (me.email||''));
-  userPickerList.innerHTML = filtered.length ? filtered.map(u=>{
-    const av = u.avatar_url? imageUrl(u.avatar_url, { bust: true }) : 'https://placehold.co/48x48';
-    const name = displayName(u);
-    return `<li class="friend" data-pick-id="${u.id}"><div class="avatar-wrap"><img class="avatar" src="${av}" alt=""/></div><div class="meta"><span class="name">${name} ${infinityBadge(u)}</span><span class="last" style="font-size:.9em">${u.email||''}</span></div></li>`;
-  }).join('') : '<li class="muted">No users found</li>';
-});
-
-// Select user to start chat
-userPickerList?.addEventListener('click', (e)=>{
-  const li = e.target.closest('.friend'); if(!li) return;
-  const uid = li.getAttribute('data-pick-id');
-  const u = (pickerBase||[]).find(x=> x.id === uid) || allUsersCache.find(x=> x.id === uid);
-  if(!u) return;
-  // Prevent selecting current user
-  if(String(u.id) === String(me.id) || (u.email||'') === (me.email||'')) return;
-  // Add to contacts and open conversation
-  upsertContact(u);
-  userPicker?.close();
-  // Simulate clicking that contact in sidebar
-  const targetLi = friendsList.querySelector(`[data-id="${u.id}"]`);
-  if(targetLi){ targetLi.click(); }
-});
+// Sidebar search re-renders list
+sidebarSearch?.addEventListener('input', ()=> renderAllUsers(allUsersCache));
 
 // Toast helper removed per rollback
 
@@ -327,17 +295,14 @@ try{
       const m = payload?.new || payload?.record || null;
       if(!m || !m.sender || m.receiver !== me?.id) return;
       const senderId = m.sender;
-      // Ensure sender shows up in contacts for the receiver automatically
+      // Ensure sender exists in cache; hydrate if missing
       try{
-        const existing = loadContacts();
-        if(!existing.find(c=> String(c.id) === String(senderId))){
-          // Attempt to hydrate sender profile
-          let prof = allUsersCache.find(u=> String(u.id) === String(senderId));
-          if(!prof){
-            const { data: u } = await sb.from('profiles').select('id, username, email, avatar_url, bio').eq('id', senderId).single();
-            prof = u || { id: senderId };
-          }
-          upsertContact(prof);
+        let prof = allUsersCache.find(u=> String(u.id) === String(senderId));
+        if(!prof){
+          const { data: u } = await sb.from('profiles').select('id, username, email, avatar_url, bio').eq('id', senderId).single();
+          prof = u || { id: senderId };
+          allUsersCache = [prof, ...allUsersCache];
+          renderAllUsers(allUsersCache);
         }
       }catch{}
       // If currently viewing this peer, mark read immediately using this message timestamp
@@ -347,7 +312,9 @@ try{
       }
       // Otherwise recompute unread for that peer
       await recomputeUnreadForPeer(senderId);
-      renderContacts(loadContacts());
+  renderAllUsers(allUsersCache);
+      // Subtle highlight to notify an update (unread increment)
+      highlightContact(senderId);
     }catch{}
   });
 }catch{}

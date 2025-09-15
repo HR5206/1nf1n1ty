@@ -157,16 +157,34 @@
         const password = $('#authPassword').value;
         const username = $('#authUsername').value.trim();
         try{
-          const res = await sb.auth.signUp({ email, password });
-          if(res.error) throw res.error;
-          let session = res.data?.session || null;
-          if(!session){
-            const res2 = await sb.auth.signInWithPassword({ email, password });
-            if(res2.error) throw res2.error;
-            session = res2.data?.session || null;
+          let session = null;
+          let signUpRes = await sb.auth.signUp({ email, password });
+          if(signUpRes.error){
+            // If the email is already registered in Auth, attempt to sign in with the provided password
+            const isDup = (signUpRes.error?.status === 422) || /registered/i.test(signUpRes.error?.message||'');
+            if(isDup){
+              const res2 = await sb.auth.signInWithPassword({ email, password });
+              if(res2.error){
+                // Existing account but wrong password — guide user to log in or reset password
+                throw new Error('Email already registered. Try logging in or reset your password.');
+              }
+              session = res2.data?.session || null;
+            } else {
+              throw signUpRes.error;
+            }
+          } else {
+            session = signUpRes.data?.session || null;
+            if(!session){
+              // If confirmations are disabled, an immediate sign-in should succeed
+              const res2 = await sb.auth.signInWithPassword({ email, password });
+              if(!res2.error) session = res2.data?.session || null;
+            }
           }
-          const userId = session?.user?.id || res.data?.user?.id;
+          // Resolve user id from session or current auth state
+          let userId = session?.user?.id || signUpRes?.data?.user?.id;
+          if(!userId){ try{ const gu = await sb.auth.getUser(); userId = gu?.data?.user?.id; }catch{} }
           if(!userId) throw new Error('Signup failed: no user session');
+
           const base = { id: userId, email, bio: "Hey there! I'm using this app." };
           if(username) base.username = username;
           await sb.from('profiles').upsert(base, { onConflict: 'id' });
