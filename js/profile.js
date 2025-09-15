@@ -1,10 +1,11 @@
-import { sb, $, initTheme, ensureAuthedOrRedirect, compressImage, initNavAuthControls, displayName, imageUrl, uploadImage, makeAvatarFromEmail } from './shared.js';
+import { sb, $, initTheme, ensureAuthedOrRedirect, compressImage, initNavAuthControls, displayName, imageUrl, uploadImage, makeAvatarFromEmail, infinityBadge } from './shared.js';
 
 initTheme();
 initNavAuthControls();
 await ensureAuthedOrRedirect();
 const { data: userWrap } = await sb.auth.getUser();
 const me = userWrap?.user;
+let profileUserData = null;
 
 $('#changeAvatar')?.addEventListener('click', ()=> $('#avatarInput').click());
 // Auto-upload avatar on file pick with live preview
@@ -37,13 +38,13 @@ $('#saveProfile')?.addEventListener('click', async ()=>{
       const blob = await compressImage(f, 512, 0.9) || f;
       const path = `avatars/${me.id}.jpg`;
       await uploadImage(path, blob);
-  await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using 1nf1n1ty Social Media App.", username: username||null, avatar_url: path }, { onConflict: 'id' });
+  await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using this app.", username: username||null, avatar_url: path }, { onConflict: 'id' });
     }else{
-  await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using 1nf1n1ty Social Media App.", username: username||null }, { onConflict: 'id' });
+  await sb.from('profiles').upsert({ id: me.id, bio: bio || "Hey there! I'm using this app.", username: username||null }, { onConflict: 'id' });
     }
     // Optimistically reflect changes
     if(username) $('#profileUsername').textContent = username;
-  $('#profileBio').textContent = bio || "Hey there! I'm using 1nf1n1ty Social Media App.";
+  $('#profileBio').textContent = bio || "Hey there! I'm using this app.";
     await renderProfile();
   }catch(ex){
     console.error('Failed to update profile', ex);
@@ -54,15 +55,20 @@ $('#saveProfile')?.addEventListener('click', async ()=>{
 // Live preview for bio while typing
 $('#bioInput')?.addEventListener('input', (e)=>{
   const v = (e.target?.value || '').trim();
-  $('#profileBio').textContent = v || "Hey there! I'm using 1nf1n1ty Social Media App.";
+  $('#profileBio').textContent = v || "Hey there! I'm using this app.";
+  // Live update badge next to name based on current typed bio
+  const u = { ...(profileUserData||{}), bio: v };
+  const nameHtml = `${displayName(u)} ${infinityBadge(u)}`;
+  const nameEl = $('#profileUsername'); if(nameEl) nameEl.innerHTML = nameHtml;
 });
 
 async function renderProfile(){
   const { data: user } = await sb.from('profiles').select('*').eq('id', me.id).single();
+  profileUserData = user;
   // Header details
-  $('#profileUsername').textContent = displayName(user);
+  $('#profileUsername').innerHTML = `${displayName(user)} ${infinityBadge(user)}`;
   $('#profileEmail').textContent = user?.email || me.email;
-  $('#profileBio').textContent = (user?.bio) || "Hey there! I'm using 1nf1n1ty Social Media App.";
+  $('#profileBio').textContent = (user?.bio) || "Hey there! I'm using this app.";
   const usernameInput = $('#usernameInput'); if(usernameInput) usernameInput.value = user.username || '';
   const bioInput = $('#bioInput'); if(bioInput) bioInput.value = user?.bio || '';
   const img = $('#profileAvatar');

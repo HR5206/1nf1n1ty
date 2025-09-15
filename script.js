@@ -98,7 +98,7 @@ async function signup(){
   const users = getUsers();
   if(users.some(x=>x.email===email)){ errEl.textContent='Email already registered.'; errEl.hidden=false; return; }
   const hp = await hash(password);
-  const user = { email, pass: hp, created_at: new Date().toISOString(), bio: 'Hey there! I\'m using 1nf1n1ty Social Media App.', avatar_url: await makeAvatarFromEmail(email) };
+  const user = { email, pass: hp, created_at: new Date().toISOString(), bio: "Hey there! I'm using this app.", avatar_url: await makeAvatarFromEmail(email) };
   users.push(user); setUsers(users);
   saveSession({ email });
   afterAuth();
@@ -220,7 +220,7 @@ async function renderProfile(){
   if(!me) return;
   const u = getUser(me.email); if(!u) return;
   document.getElementById('profileEmail').textContent = me.email;
-  document.getElementById('profileBio').textContent = u.bio || "Hey there! I'm using 1nf1n1ty Social Media App.";
+  document.getElementById('profileBio').textContent = u.bio || "Hey there! I'm using this app.";
   if(u.avatar_url){ document.getElementById('profileAvatar').src = u.avatar_url; }
   else { document.getElementById('profileAvatar').src = await makeAvatarFromEmail(me.email); }
   // grid of my posts

@@ -30,8 +30,14 @@ const THEME_KEY = 'sd_theme';
 export function applyTheme(mode){ document.documentElement.classList.toggle('dark', mode==='dark'); }
 export function initTheme(){
   const saved = localStorage.getItem(THEME_KEY);
-  if(saved=== 'dark' || saved=== 'light') applyTheme(saved);
-  else if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) applyTheme('dark');
+  if(saved=== 'dark' || saved=== 'light') {
+    applyTheme(saved);
+  } else {
+    // Default to dark when unset; fall back to prefers-color-scheme if needed
+    const defaultMode = 'dark';
+    applyTheme(defaultMode);
+    try{ localStorage.setItem(THEME_KEY, defaultMode); }catch{}
+  }
   $('#themeToggle')?.addEventListener('click', ()=>{
     const isDark = !document.documentElement.classList.contains('dark');
     applyTheme(isDark?'dark':'light');
@@ -126,6 +132,20 @@ export function displayName(user){
   const id = (user?.id||user?.user_id||'').toString();
   if(id) return `User-${id.slice(-4)}`;
   return 'User';
+}
+
+// Team 1nf1n1ty badge helpers
+export function hasInfinityTag(user){
+  try{
+    const bio = (user?.bio||'').toString();
+    // Case-insensitive whole-word match for "1nf1n1ty"
+    return /\b1nf1n1ty\b/i.test(bio);
+  }catch{ return false; }
+}
+export function infinityBadge(user){
+  return hasInfinityTag(user)
+    ? `<span class="badge-1nf1n1ty" title="Team 1nf1n1ty"><img src="./assets/1nf1n1ty.webp" alt="1nf1n1ty"/></span>`
+    : '';
 }
 
 // Auth helpers (Supabase)

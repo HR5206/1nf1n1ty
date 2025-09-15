@@ -167,7 +167,7 @@
           }
           const userId = session?.user?.id || res.data?.user?.id;
           if(!userId) throw new Error('Signup failed: no user session');
-          const base = { id: userId, email, bio: "Hey there! I'm using 1nf1n1ty Social Media App." };
+          const base = { id: userId, email, bio: "Hey there! I'm using this app." };
           if(username) base.username = username;
           await sb.from('profiles').upsert(base, { onConflict: 'id' });
           try{

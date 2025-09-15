@@ -49,7 +49,7 @@
   </style>
   <script>
     // Respect saved theme from the app if present
-    try{ if(localStorage.getItem('sd_theme')==='dark'){ document.documentElement.classList.add('dark'); } }catch{}
+  try{ const t=localStorage.getItem('sd_theme'); if(!t||t==='dark'){ document.documentElement.classList.add('dark'); } }catch{}
   </script>
 </head>
 <body>

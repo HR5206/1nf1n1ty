@@ -1,4 +1,4 @@
-import { sb, $, $$, initTheme, ensureAuthedOrRedirect, displayName, compressImage, initNavAuthControls, imageUrl, uploadImage, subscribeTable } from './shared.js';
+import { sb, $, $$, initTheme, ensureAuthedOrRedirect, displayName, compressImage, initNavAuthControls, imageUrl, uploadImage, subscribeTable, infinityBadge } from './shared.js';
 
 initTheme();
 initNavAuthControls();
@@ -17,13 +17,16 @@ async function buildPostElement(p){
     avatarUrl = imageUrl(author.avatar_url, { bust: true });
   }
   const when = toDate(p.created_at || p.created).toLocaleString();
-  const mediaUrl = p.image_path ? imageUrl(p.image_path) : '';
+  const img = p.image_path ? imageUrl(p.image_path) : null;
   li.innerHTML = `
     <header class="row">
       <img class="avatar" src="${avatarUrl}" alt="avatar"/>
-      <div><div><strong>${displayName(author)||''}</strong></div><div class="muted">${when}</div></div>
+      <div><div><strong>${displayName(author)||''}</strong> ${infinityBadge(author)}</div><div class="muted">${when}</div></div>
     </header>
-    <div class="media" data-media="${p.id}">${mediaUrl?`<img loading="lazy" src="${mediaUrl}" alt="post media"/>`:''}<div class="dbl-heart" id="h_${p.id}">❤</div></div>
+    <div class="media" data-media="${p.id}">
+      ${img ? `<img loading="lazy" src="${img}" alt="post image"/>` : ''}
+      <div class="dbl-heart" id="h_${p.id}">❤</div>
+    </div>
     <div class="actions">
       <button class="btn" data-like="${p.id}">❤ Like</button>
       <button class="btn" data-open-comments="${p.id}">💬 Comment</button>
@@ -74,7 +77,11 @@ function subscribeComments(postId, firstN=null){
     const ul = document.getElementById(`c_${postId}`);
     const countEl = document.getElementById(`cm_${postId}`);
     if(ul){
-      let html = items.map(c=> `<li><strong>${displayName(c.profiles)||''}</strong> ${c.text||''}</li>`).join('');
+      let html = items.map(c=> {
+        const canDel = me && c.user_id === me.id;
+        const del = canDel ? ` <button class="msg-del" data-del-comment="${c.id}" title="Delete" aria-label="Delete comment">🗑</button>` : '';
+        return `<li><strong>${displayName(c.profiles)||''}</strong> ${infinityBadge(c.profiles)} ${c.text||''}${del}</li>`;
+      }).join('');
       ul.innerHTML = html;
     }
     const total = list?.length || 0;
@@ -105,12 +112,15 @@ function subscribeFeed(){
   unsubPosts = subscribeTable('posts', '', ()=> loadAndRenderFeed());
 }
 
+// Removed carousel logic for single-image posts
+
 // Uploader handlers
 const dropzone = $('#dropzone');
 const postImage = $('#postImage');
 const browseImage = $('#browseImage');
 const previewImage = $('#previewImage');
 const removeImageBtn = $('#removeImage');
+// no image counter in single-image mode
 const dzInstructions = dropzone ? dropzone.querySelector('.dz-instructions') : null;
 const captionEl = $('#postCaption');
 const captionCount = $('#captionCount');
@@ -138,8 +148,10 @@ previewImage?.addEventListener('error', hidePreview);
 
 browseImage?.addEventListener('click', ()=> postImage.click());
 postImage?.addEventListener('change', ()=>{
-  const f = postImage.files?.[0];
-  if(f) showPreview(f); else hidePreview();
+  const files = Array.from(postImage.files||[]).filter(f=> f.type?.startsWith('image/'));
+  const f = files?.[0];
+  if(f) { showPreview(f); }
+  else { hidePreview(); }
 });
 // Remove selected image
 removeImageBtn?.addEventListener('click', ()=>{
@@ -155,13 +167,16 @@ if(dropzone){
   ['dragleave','drop'].forEach(evt=> dropzone.addEventListener(evt, (e)=>{ stop(e); dropzone.classList.remove('dragover'); }));
   dropzone.addEventListener('drop', (e)=>{
     const files = e.dataTransfer?.files; if(!files || !files.length) return;
-    const file = Array.from(files).find(f=> f.type?.startsWith('image/')) || files[0];
-    if(!file) return;
-    // Assign dropped file to the hidden input so submit flow works
+    const imgs = Array.from(files).filter(f=> f.type?.startsWith('image/'));
+    if(!imgs.length) return;
+    // Assign dropped files to the hidden input so submit flow works (replaces selection)
     try{
-      const dt = new DataTransfer(); dt.items.add(file); postImage.files = dt.files;
+      const dt = new DataTransfer();
+      imgs.forEach(f=> dt.items.add(f));
+      postImage.files = dt.files;
     }catch{}
-    showPreview(file);
+    // Preview first image and update count
+    showPreview(imgs[0]);
   });
   // Keyboard access: Enter/Space opens file picker
   dropzone.addEventListener('keydown', (e)=>{
@@ -172,7 +187,8 @@ captionEl?.addEventListener('input', ()=> captionCount.textContent = String(capt
 // Initialize caption counter on load
 if(captionEl && captionCount){ captionCount.textContent = String(captionEl.value.length); }
 postSubmit?.addEventListener('click', async ()=>{
-  const f = postImage.files?.[0]; const caption = captionEl.value.trim();
+  const files = Array.from(postImage.files||[]).filter(f=> f.type?.startsWith('image/'));
+  const f = files?.[0]; const caption = captionEl.value.trim();
   if(!me) return;
   let fileBlob = null;
   if(f){ fileBlob = await compressImage(f, 1280, 0.85) || f; }
@@ -181,11 +197,11 @@ postSubmit?.addEventListener('click', async ()=>{
   const { data: rec, error } = await sb.from('posts').insert({ user_id: me.id, caption }).select('id').single();
   // Optimistically refresh feed so the new post appears immediately
   try{ await loadAndRenderFeed(); }catch{}
-  if(!error && rec && fileBlob){
-    const path = `posts/${rec.id}.jpg`;
-    await uploadImage(path, fileBlob);
+  if(!error && rec && f){
+    const ext = (f.type && f.type.includes('png'))? 'png' : 'jpg';
+    const path = `posts/${rec.id}.${ext}`;
+    await uploadImage(path, fileBlob || f);
     await sb.from('posts').update({ image_path: path }).eq('id', rec.id);
-    // Refresh again so the image shows once uploaded
     try{ await loadAndRenderFeed(); }catch{}
   }
   // Reset uploader UI
@@ -198,14 +214,14 @@ $('#app')?.addEventListener('click', async (e)=>{
   if(openLikes){
     const pid = openLikes.getAttribute('data-open-likes');
     const { data: likes } = await sb.from('likes')
-      .select('user_id, profiles(id, username, email, avatar_url)')
+      .select('user_id, profiles(id, username, email, avatar_url, bio)')
       .eq('post_id', pid);
   const ul = $('#likesList');
     ul.innerHTML = (likes && likes.length) ? likes.map(l=>{
       const u = l.profiles;
       const av = u?.avatar_url ? imageUrl(u.avatar_url) : 'https://placehold.co/32x32';
       const name = displayName(u);
-      return `<li class="row"><img class="avatar" style="width:32px;height:32px" src="${av}" alt=""/><span>${name}</span></li>`;
+      return `<li class="row"><img class="avatar" style="width:32px;height:32px" src="${av}" alt=""/><span>${name} ${infinityBadge(u)}</span></li>`;
     }).join('') : '<li class="muted">No likes yet</li>';
     $('#likesModal').showModal();
   }
@@ -237,6 +253,8 @@ $('#app')?.addEventListener('click', async (e)=>{
   const va = e.target.closest('[data-open-comments]');
   if(va){
     const pid = va.getAttribute('data-open-comments');
+    // Store current post id for the modal to allow refresh after deletions
+    window.__currentCommentsPostId = pid;
     const { data: list } = await sb.from('comments').select('id, text, created_at, user_id, profiles(*)').eq('post_id', pid).order('created_at', { ascending: true });
     const ul = $('#commentsList');
     ul.innerHTML = (list && list.length) ? list.map(c=>{
@@ -245,7 +263,9 @@ $('#app')?.addEventListener('click', async (e)=>{
       const name = displayName(u) || '';
       const when = toDate(c.created_at).toLocaleString();
       const text = c.text || '';
-      return `<li class="row"><img class="avatar" style="width:32px;height:32px" src="${av}" alt=""/><div><div><strong>${name}</strong> <span class="muted" style="font-size:.9em">· ${when}</span></div><div>${text}</div></div></li>`;
+      const canDel = me && c.user_id === me.id;
+      const del = canDel ? `<button class="msg-del" data-del-comment="${c.id}" title="Delete" aria-label="Delete comment" style="margin-left:8px">🗑</button>` : '';
+      return `<li class="row"><img class="avatar" style="width:32px;height:32px" src="${av}" alt=""/><div><div><strong>${name}</strong> ${infinityBadge(u)} <span class="muted" style="font-size:.9em">· ${when}</span></div><div>${text} ${del}</div></div></li>`;
     }).join('') : '<li class="muted">No comments yet</li>';
     $('#commentsModal').showModal();
     return;
@@ -265,6 +285,65 @@ $('#app')?.addEventListener('keydown', async (e)=>{
   }
 });
 $('#closeComments')?.addEventListener('click', ()=> $('#commentsModal').close());
+
+// Delete comment actions (inline or modal)
+$('#app')?.addEventListener('click', async (e)=>{
+  const del = e.target.closest('[data-del-comment]');
+  if(!del) return;
+  const id = del.getAttribute('data-del-comment');
+  if(!id || !me) return;
+  const ok = window.confirm('Delete this comment?');
+  if(!ok) return;
+  const { error } = await sb.from('comments').delete().eq('id', id).eq('user_id', me.id);
+  if(error){ alert('Failed to delete comment'); return; }
+  try{
+    // If modal is open, refresh its list using stored post id
+    const pid = window.__currentCommentsPostId;
+    if(pid && document.getElementById('commentsModal')?.open){
+      const { data: list } = await sb.from('comments').select('id, text, created_at, user_id, profiles(*)').eq('post_id', pid).order('created_at', { ascending: true });
+      const ul = $('#commentsList');
+      ul.innerHTML = (list && list.length) ? list.map(c=>{
+        const u = c.profiles;
+        const av = u?.avatar_url ? imageUrl(u.avatar_url) : 'https://placehold.co/32x32';
+        const name = displayName(u) || '';
+        const when = toDate(c.created_at).toLocaleString();
+        const text = c.text || '';
+        const canDel = me && c.user_id === me.id;
+        const d = canDel ? `<button class="msg-del" data-del-comment="${c.id}" title="Delete" aria-label="Delete comment" style="margin-left:8px">🗑</button>` : '';
+        return `<li class="row"><img class="avatar" style="width:32px;height:32px" src="${av}" alt=""/><div><div><strong>${name}</strong> ${infinityBadge(u)} <span class="muted" style="font-size:.9em">· ${when}</span></div><div>${text} ${d}</div></div></li>`;
+      }).join('') : '<li class="muted">No comments yet</li>';
+    }
+  }catch{}
+});
+
+// Also catch delete clicks inside the comments modal
+$('#commentsModal')?.addEventListener('click', async (e)=>{
+  const del = e.target.closest('[data-del-comment]');
+  if(!del) return;
+  const id = del.getAttribute('data-del-comment');
+  if(!id || !me) return;
+  const ok = window.confirm('Delete this comment?');
+  if(!ok) return;
+  const { error } = await sb.from('comments').delete().eq('id', id).eq('user_id', me.id);
+  if(error){ alert('Failed to delete comment'); return; }
+  try{
+    const pid = window.__currentCommentsPostId;
+    if(pid){
+      const { data: list } = await sb.from('comments').select('id, text, created_at, user_id, profiles(*)').eq('post_id', pid).order('created_at', { ascending: true });
+      const ul = $('#commentsList');
+      ul.innerHTML = (list && list.length) ? list.map(c=>{
+        const u = c.profiles;
+        const av = u?.avatar_url ? imageUrl(u.avatar_url) : 'https://placehold.co/32x32';
+        const name = displayName(u) || '';
+        const when = toDate(c.created_at).toLocaleString();
+        const text = c.text || '';
+        const canDel = me && c.user_id === me.id;
+        const d = canDel ? `<button class=\"msg-del\" data-del-comment=\"${c.id}\" title=\"Delete\" aria-label=\"Delete comment\" style=\"margin-left:8px\">🗑</button>` : '';
+        return `<li class="row"><img class="avatar" style="width:32px;height:32px" src="${av}" alt=""/><div><div><strong>${name}</strong> ${infinityBadge(u)} <span class="muted" style="font-size:.9em">· ${when}</span></div><div>${text} ${d}</div></div></li>`;
+      }).join('') : '<li class="muted">No comments yet</li>';
+    }
+  }catch{}
+});
 
 // double-tap like
 let lastTap=0;
