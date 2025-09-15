@@ -132,11 +132,11 @@ function renderFeed(){
   const list = document.getElementById('feedList'); if(!list) return;
   const posts = getPosts().sort((a,b)=> new Date(b.created_at)-new Date(a.created_at));
   list.innerHTML = posts.map(p=>{
-  const u = getUser(p.user);
-  const avatar = (u && u.avatar_url) ? u.avatar_url : 'https://placehold.co/64x64?text=' + encodeURIComponent((p.user||'?')[0]?.toUpperCase()||'?');
+    const u = getUser(p.user);
+    const avatar = (u && u.avatar_url) ? u.avatar_url : 'https://placehold.co/64x64?text=' + encodeURIComponent((p.user||'?')[0]?.toUpperCase()||'?');
     const likes = getLikes();
     const arr = likes[p.id]||[]; const count = arr.length; const liked = me && arr.includes(me.email);
-  return `<li class="post" data-id="${p.id}">
+    return `<li class="post" data-id="${p.id}">
       <header class="row">
         <img class="avatar" src="${avatar}" alt="avatar"/>
         <div><div><strong>${p.user}</strong></div><div class="muted">${new Date(p.created_at).toLocaleString()}</div></div>
@@ -234,21 +234,9 @@ async function renderProfile(){
   document.getElementById('statPosts').textContent = String(my.length);
 }
 
-// Generate a simple avatar from first letter of email
-async function makeAvatarFromEmail(email){
-  try{
-    const letter = (email||'?').trim().charAt(0).toUpperCase() || '?';
-    const canvas = document.createElement('canvas'); canvas.width=120; canvas.height=120;
-    const ctx = canvas.getContext('2d');
-    // Pick a color based on hash
-    let h=0; for(const ch of email){ h = (h*31 + ch.charCodeAt(0))>>>0; }
-    const hue = h % 360; ctx.fillStyle = `hsl(${hue},65%,55%)`;
-    ctx.fillRect(0,0,120,120);
-    ctx.fillStyle = '#ffffff'; ctx.font = '700 64px Inter, Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(letter, 60, 68);
-    return canvas.toDataURL('image/png');
-  }catch{ return 'https://placehold.co/120x120?text=?'; }
-}
+// Proxy to shared theme-aware generator
+let __makeAvatar=null; (async()=>{ try{ const m = await import('./js/shared.js'); __makeAvatar = m.makeAvatarFromEmail; }catch{} })();
+async function makeAvatarFromEmail(email){ if(__makeAvatar) return __makeAvatar(email); try{ return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#d70b4d"/><text x="60" y="68" font-family="Inter, Arial" font-size="60" font-weight="700" text-anchor="middle" fill="#fff">${(email||'?')[0]?.toUpperCase()||'?'}</text></svg>`); }catch{ return 'https://placehold.co/120x120?text=?'; } }
 
 // Delete post: remove from posts, its comments, and likes; broadcast and refresh
 document.getElementById('app')?.addEventListener('click', (e)=>{

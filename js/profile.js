@@ -1,4 +1,4 @@
-import { sb, $, initTheme, ensureAuthedOrRedirect, compressImage, initNavAuthControls, displayName, imageUrl, uploadImage } from './shared.js';
+import { sb, $, initTheme, ensureAuthedOrRedirect, compressImage, initNavAuthControls, displayName, imageUrl, uploadImage, makeAvatarFromEmail } from './shared.js';
 
 initTheme();
 initNavAuthControls();
@@ -69,7 +69,7 @@ async function renderProfile(){
   if (user?.avatar_url) {
     img.src = imageUrl(user.avatar_url, { bust: true });
   } else {
-    img.src = 'https://placehold.co/120x120?text=' + encodeURIComponent((user?.email||me.email||'?').charAt(0).toUpperCase());
+    try{ img.src = await makeAvatarFromEmail(user?.email||me.email||'?'); }catch{ img.src='https://placehold.co/120x120?text=?'; }
   }
   // Posts grid
   const { data: posts } = await sb.from('posts').select('id, image_path').eq('user_id', me.id).order('created_at', { ascending: false });

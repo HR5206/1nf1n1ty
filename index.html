@@ -11,14 +11,14 @@
   <meta name="description" content="SastraDaily — a fast, modern social app (local-first demo)" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./styles.css" />
-  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="./assets/1nf1n1ty.webp?v=1" type="image/webp" />
 </head>
 <body>
   <noscript>This app requires JavaScript enabled.</noscript>
   <header class="app-header">
-  <div class="brand"><img id="siteLogo" class="site-logo" src="./assets/1nf1n1ty.webp" alt="Logo" /></div>
+  <div class="brand"><a href="./logo-redirect.html" aria-label="Team 1nf1n1ty homepage"><img id="siteLogo" class="site-logo" src="./assets/1nf1n1ty.webp" alt="Logo" /></a></div>
     <div class="actions"><button id="themeToggle" title="Toggle theme" class="btn">🌓</button></div>
   </header>
 
@@ -27,6 +27,7 @@
     <section id="route-auth" class="route">
       <div class="auth-grid single">
         <div class="auth-card" id="authCard">
+          <div class="auth-brand"><img src="./assets/1nf1n1ty.webp" alt="Brand" /><span>1nf1n1ty</span></div>
           <h1 id="authTitle" class="gradient-text" style="margin:0 0 8px;text-align:center">Create your account</h1>
           <p id="authSubtitle" class="muted" style="margin:0 0 12px;text-align:center">Join the 1nf1n1ty community</p>
           <form id="authPageForm" class="auth-form" autocomplete="on">
@@ -87,9 +88,9 @@
 
     <!-- Likes list modal -->
     <dialog id="likesModal">
-      <div class="card" style="min-width:280px;max-width:420px">
+      <div class="card">
         <h3 style="margin-top:0">Likes</h3>
-        <ul id="likesList" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px"></ul>
+        <ul id="likesList"></ul>
         <div class="row" style="justify-content:flex-end;margin-top:10px">
           <button id="closeLikes" class="btn">Close</button>
         </div>
@@ -176,7 +177,6 @@
             await uploadImage(path, blob);
             await sb.from('profiles').update({ avatar_url: path }).eq('id', userId);
           }catch{}
-          try { localStorage.setItem('sd_theme','dark'); } catch {}
           location.href='./feed.html';
         }catch(ex){ err.textContent = ex?.message || 'Sign up failed'; err.hidden = false; }
       }else{
@@ -185,7 +185,6 @@
         try{
           const { error } = await sb.auth.signInWithPassword({ email, password });
           if(error) throw error;
-          try { localStorage.setItem('sd_theme','dark'); } catch {}
           location.href='./feed.html';
         }catch(ex){ err.textContent = ex?.message || 'Login failed'; err.hidden = false; }
       }

@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="supabase-url" content="https://xrpsysmgyhnjpztgervr.supabase.co" />
   <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycHN5c21neWhuanB6dGdlcnZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NTcwMTgsImV4cCI6MjA3MzQzMzAxOH0.sLFqsvbQSXdtzgvH-bMsTuItL8K_FMUl0_Y4gtG7iXQ" />
-  <title>SastraDaily • Feed</title>
+  <title>Feed</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
   <script>try{ if(localStorage.getItem('sd_theme')==='dark'){ document.documentElement.classList.add('dark'); } }catch{}</script>
   <link rel="stylesheet" href="./styles.css" />
-  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="./assets/1nf1n1ty.webp?v=1" type="image/webp" />
 </head>
 <body>
   <header class="app-header">
-  <div class="brand"><img id="siteLogo" class="site-logo" src="./assets/1nf1n1ty.webp" alt="Logo" /></div>
+  <div class="brand"><a href="./logo-redirect.html" aria-label="Team 1nf1n1ty homepage"><img id="siteLogo" class="site-logo" src="./assets/1nf1n1ty.webp" alt="Logo" /></a></div>
     <nav class="nav">
       <a class="nav-btn" href="./feed.html">Feed</a>
       <a class="nav-btn" href="./profile.html">Profile</a>
@@ -31,6 +31,7 @@
           <div id="dropzone" class="dropzone" tabindex="0">
             <input type="file" id="postImage" accept="image/*" aria-label="Upload image" hidden />
             <div class="dz-instructions"><strong>Drag & drop</strong> an image here, or <button class="btn gradient" id="browseImage" type="button">Browse</button></div>
+            <button id="removeImage" type="button" class="dz-remove" aria-label="Remove selected image">✕ Remove</button>
             <img id="previewImage" alt="preview" class="hidden" />
           </div>
           <div class="uploader-meta">
@@ -42,7 +43,35 @@
       <section class="feed-main"><ul id="feedList" class="feed"></ul></section>
     </div>
   </main>
-  <dialog id="likesModal"><div class="card" style="min-width:280px;max-width:420px"><h3 style="margin-top:0">Likes</h3><ul id="likesList" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px"></ul><div class="row" style="justify-content:flex-end;margin-top:10px"><button id="closeLikes" class="btn">Close</button></div></div></dialog>
+  <dialog id="likesModal">
+    <div class="card">
+      <h3 style="margin-top:0">Likes</h3>
+      <ul id="likesList"></ul>
+      <div class="row" style="justify-content:flex-end;margin-top:10px"><button id="closeLikes" class="btn">Close</button></div>
+    </div>
+  </dialog>
+  <dialog id="commentsModal">
+    <div class="card">
+      <h3 style="margin-top:0">Comments</h3>
+      <ul id="commentsList"></ul>
+      <div class="row" style="justify-content:flex-end;margin-top:10px"><button id="closeComments" class="btn">Close</button></div>
+    </div>
+  </dialog>
+  <dialog id="imageViewer">
+    <div class="viewer">
+      <div class="viewer-toolbar">
+        <div class="viewer-actions">
+          <button class="viewer-btn" id="zoomOutBtn" type="button">−</button>
+          <button class="viewer-btn" id="zoomInBtn" type="button">+</button>
+          <button class="viewer-btn" id="zoomResetBtn" type="button">Reset</button>
+        </div>
+        <button class="viewer-btn" id="closeViewerBtn" type="button">Close</button>
+      </div>
+      <div class="viewer-canvas">
+        <img id="viewerImage" alt="image preview" />
+      </div>
+    </div>
+  </dialog>
   <script type="module">
     import { initLogo } from './js/shared.js';
     initLogo();

@@ -13,7 +13,9 @@ async function buildPostElement(p){
   const li = document.createElement('li'); li.className='post'; li.dataset.id=p.id;
   const author = p.profiles || p.profile || p.user;
   let avatarUrl = 'https://placehold.co/64x64';
-  if(author?.avatar_url){ avatarUrl = imageUrl(author.avatar_url, { bust: true }); }
+  if(author?.avatar_url){
+    avatarUrl = imageUrl(author.avatar_url, { bust: true });
+  }
   const when = toDate(p.created_at || p.created).toLocaleString();
   const mediaUrl = p.image_path ? imageUrl(p.image_path) : '';
   li.innerHTML = `
@@ -24,12 +26,17 @@ async function buildPostElement(p){
     <div class="media" data-media="${p.id}">${mediaUrl?`<img loading="lazy" src="${mediaUrl}" alt="post media"/>`:''}<div class="dbl-heart" id="h_${p.id}">❤</div></div>
     <div class="actions">
       <button class="btn" data-like="${p.id}">❤ Like</button>
-      <button class="btn" data-comment-focus="${p.id}">💬 Comment</button>
+      <button class="btn" data-open-comments="${p.id}">💬 Comment</button>
     </div>
-    <div class="likes" data-likes="${p.id}" data-open-likes="${p.id}"></div>
+    <div class="likes-row">
+      <div class="likes" data-likes="${p.id}" data-open-likes="${p.id}"></div>
+      <div class="comments-count" id="cm_${p.id}" data-open-comments="${p.id}"></div>
+    </div>
     <div class="caption"><strong>${displayName(author)||''}</strong> ${(p.caption||'')}</div>
-    <ul class="comments" id="c_${p.id}"></ul>
-    <div class="comment-input"><input data-cin="${p.id}" type="text" placeholder="Add a comment..." maxlength="200"/><button class="btn" data-csend="${p.id}">Post</button></div>
+    <div class="comment-input">
+      <input type="text" placeholder="Add a comment..." data-cin="${p.id}" />
+      <button class="btn" type="button" data-csend="${p.id}">Post</button>
+    </div>
   `;
   return li;
 }
@@ -64,10 +71,14 @@ function subscribeComments(postId, firstN=null){
   const handler = async ()=>{
     const { data: list } = await sb.from('comments').select('id, text, created_at, user_id, profiles(*)').eq('post_id', postId).order('created_at', { ascending: true });
     const items = firstN? (list||[]).slice(0, firstN) : (list||[]);
-    const ul = document.getElementById(`c_${postId}`); if(!ul) return;
-    let html = items.map(c=> `<li><strong>${displayName(c.profiles)||''}</strong> ${c.text||''}</li>`).join('');
-    if(firstN && (list?.length||0)>items.length){ html += `<li><button class="btn" data-viewall="${postId}">View all ${list.length} comments</button></li>`; }
-    ul.innerHTML = html;
+    const ul = document.getElementById(`c_${postId}`);
+    const countEl = document.getElementById(`cm_${postId}`);
+    if(ul){
+      let html = items.map(c=> `<li><strong>${displayName(c.profiles)||''}</strong> ${c.text||''}</li>`).join('');
+      ul.innerHTML = html;
+    }
+    const total = list?.length || 0;
+    if(countEl){ countEl.textContent = total ? `View all ${total} ${total===1?'comment':'comments'}` : ''; countEl.style.visibility = total? 'visible' : 'hidden'; }
   };
   handler();
   unsubComments.set(postId, subscribeTable('comments', `post_id=eq.${postId}`, handler));
@@ -95,9 +106,12 @@ function subscribeFeed(){
 }
 
 // Uploader handlers
+const dropzone = $('#dropzone');
 const postImage = $('#postImage');
 const browseImage = $('#browseImage');
 const previewImage = $('#previewImage');
+const removeImageBtn = $('#removeImage');
+const dzInstructions = dropzone ? dropzone.querySelector('.dz-instructions') : null;
 const captionEl = $('#postCaption');
 const captionCount = $('#captionCount');
 const postSubmit = $('#postSubmit');
@@ -106,6 +120,8 @@ let previewBlobUrl = null;
 function hidePreview(){
   if(previewBlobUrl){ try{ URL.revokeObjectURL(previewBlobUrl); }catch{} previewBlobUrl=null; }
   if(previewImage){ previewImage.classList.add('hidden'); previewImage.removeAttribute('src'); }
+  if(dropzone){ dropzone.classList.remove('has-preview'); }
+  if(dzInstructions){ dzInstructions.classList.remove('hidden'); }
 }
 function showPreview(file){
   if(!file) return hidePreview();
@@ -113,6 +129,8 @@ function showPreview(file){
   previewBlobUrl = URL.createObjectURL(file);
   previewImage.src = previewBlobUrl;
   previewImage.classList.remove('hidden');
+  if(dropzone){ dropzone.classList.add('has-preview'); }
+  if(dzInstructions){ dzInstructions.classList.add('hidden'); }
 }
 // Initial state and error guard so "null/broken" image never shows
 hidePreview();
@@ -123,7 +141,36 @@ postImage?.addEventListener('change', ()=>{
   const f = postImage.files?.[0];
   if(f) showPreview(f); else hidePreview();
 });
+// Remove selected image
+removeImageBtn?.addEventListener('click', ()=>{
+  if(postImage){
+    try{ postImage.value = ''; }catch{}
+  }
+  hidePreview();
+});
+// Drag & drop support for the dropzone
+if(dropzone){
+  const stop = (ev)=>{ ev.preventDefault(); ev.stopPropagation(); };
+  ['dragenter','dragover'].forEach(evt=> dropzone.addEventListener(evt, (e)=>{ stop(e); dropzone.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(evt=> dropzone.addEventListener(evt, (e)=>{ stop(e); dropzone.classList.remove('dragover'); }));
+  dropzone.addEventListener('drop', (e)=>{
+    const files = e.dataTransfer?.files; if(!files || !files.length) return;
+    const file = Array.from(files).find(f=> f.type?.startsWith('image/')) || files[0];
+    if(!file) return;
+    // Assign dropped file to the hidden input so submit flow works
+    try{
+      const dt = new DataTransfer(); dt.items.add(file); postImage.files = dt.files;
+    }catch{}
+    showPreview(file);
+  });
+  // Keyboard access: Enter/Space opens file picker
+  dropzone.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); browseImage?.click(); }
+  });
+}
 captionEl?.addEventListener('input', ()=> captionCount.textContent = String(captionEl.value.length));
+// Initialize caption counter on load
+if(captionEl && captionCount){ captionCount.textContent = String(captionEl.value.length); }
 postSubmit?.addEventListener('click', async ()=>{
   const f = postImage.files?.[0]; const caption = captionEl.value.trim();
   if(!me) return;
@@ -153,7 +200,7 @@ $('#app')?.addEventListener('click', async (e)=>{
     const { data: likes } = await sb.from('likes')
       .select('user_id, profiles(id, username, email, avatar_url)')
       .eq('post_id', pid);
-    const ul = $('#likesList');
+  const ul = $('#likesList');
     ul.innerHTML = (likes && likes.length) ? likes.map(l=>{
       const u = l.profiles;
       const av = u?.avatar_url ? imageUrl(u.avatar_url) : 'https://placehold.co/32x32';
@@ -167,12 +214,14 @@ $('#closeLikes')?.addEventListener('click', ()=> $('#likesModal').close());
 
 // Comments/likes actions
 $('#app')?.addEventListener('click', async (e)=>{
+  // Inline add-comment input
   const cbtn = e.target.closest('[data-csend]');
   if(cbtn){
     const pid = cbtn.getAttribute('data-csend');
     const input = document.querySelector(`[data-cin="${pid}"]`);
     const text = input.value.trim(); if(!text) return;
-  await sb.from('comments').insert({ post_id: pid, user_id: me.id, text });
+    if(!me) return;
+    await sb.from('comments').insert({ post_id: pid, user_id: me.id, text });
     input.value=''; return;
   }
   const likeBtn = e.target.closest('[data-like]');
@@ -184,11 +233,38 @@ $('#app')?.addEventListener('click', async (e)=>{
   else { await sb.from('likes').insert({ post_id: pid, user_id: me.id }); likeBtn.textContent='❤ Liked'; likeBtn.classList.add('active'); }
     return;
   }
-  const focusBtn = e.target.closest('[data-comment-focus]');
-  if(focusBtn){ const pid = focusBtn.getAttribute('data-comment-focus'); document.querySelector(`[data-cin="${pid}"]`)?.focus(); return; }
-  const va = e.target.closest('[data-viewall]');
-  if(va){ const pid = va.getAttribute('data-viewall'); subscribeComments(pid, null); return; }
+  // Comment button opens the comments modal
+  const va = e.target.closest('[data-open-comments]');
+  if(va){
+    const pid = va.getAttribute('data-open-comments');
+    const { data: list } = await sb.from('comments').select('id, text, created_at, user_id, profiles(*)').eq('post_id', pid).order('created_at', { ascending: true });
+    const ul = $('#commentsList');
+    ul.innerHTML = (list && list.length) ? list.map(c=>{
+      const u = c.profiles;
+      const av = u?.avatar_url ? imageUrl(u.avatar_url) : 'https://placehold.co/32x32';
+      const name = displayName(u) || '';
+      const when = toDate(c.created_at).toLocaleString();
+      const text = c.text || '';
+      return `<li class="row"><img class="avatar" style="width:32px;height:32px" src="${av}" alt=""/><div><div><strong>${name}</strong> <span class="muted" style="font-size:.9em">· ${when}</span></div><div>${text}</div></div></li>`;
+    }).join('') : '<li class="muted">No comments yet</li>';
+    $('#commentsModal').showModal();
+    return;
+  }
 });
+// Allow Enter key to submit inline comment
+$('#app')?.addEventListener('keydown', async (e)=>{
+  const input = e.target.closest('input[data-cin]');
+  if(!input) return;
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    const pid = input.getAttribute('data-cin');
+    const text = input.value.trim(); if(!text) return;
+    if(!me) return;
+    await sb.from('comments').insert({ post_id: pid, user_id: me.id, text });
+    input.value='';
+  }
+});
+$('#closeComments')?.addEventListener('click', ()=> $('#commentsModal').close());
 
 // double-tap like
 let lastTap=0;
@@ -205,3 +281,55 @@ $('#app')?.addEventListener('click', async (e)=>{
 }, true);
 
 subscribeFeed();
+
+// Image viewer (zoom & pan)
+const imageViewer = $('#imageViewer');
+const viewerImage = $('#viewerImage');
+const zoomInBtn = $('#zoomInBtn');
+const zoomOutBtn = $('#zoomOutBtn');
+const zoomResetBtn = $('#zoomResetBtn');
+const closeViewerBtn = $('#closeViewerBtn');
+
+let vZoom = 1;
+let vX = 0, vY = 0;
+let isPanning = false; let panStartX = 0, panStartY = 0; let imgStartX=0, imgStartY=0;
+
+function applyViewerTransform(){
+  if(viewerImage){ viewerImage.style.transform = `translate(${vX}px, ${vY}px) scale(${vZoom})`; }
+}
+function openViewer(src){
+  if(!imageViewer || !viewerImage) return;
+  viewerImage.src = src;
+  vZoom = 1; vX = 0; vY = 0; applyViewerTransform();
+  imageViewer.showModal();
+}
+function closeViewer(){ imageViewer?.close(); }
+
+$('#app')?.addEventListener('click', (e)=>{
+  const img = e.target.closest('.media img');
+  if(img && img.src){ openViewer(img.src); }
+});
+
+zoomInBtn?.addEventListener('click', ()=>{ vZoom = Math.min(6, vZoom * 1.2); applyViewerTransform(); });
+zoomOutBtn?.addEventListener('click', ()=>{ vZoom = Math.max(0.2, vZoom / 1.2); applyViewerTransform(); });
+zoomResetBtn?.addEventListener('click', ()=>{ vZoom = 1; vX=0; vY=0; applyViewerTransform(); });
+closeViewerBtn?.addEventListener('click', closeViewer);
+
+// Wheel zoom
+imageViewer?.addEventListener('wheel', (e)=>{
+  if(!viewerImage) return;
+  e.preventDefault();
+  const delta = Math.sign(e.deltaY);
+  const prev = vZoom;
+  vZoom = delta > 0 ? Math.max(0.2, vZoom / 1.1) : Math.min(6, vZoom * 1.1);
+  // Zoom toward cursor center: optional simple approach keeps translation
+  applyViewerTransform();
+}, { passive: false });
+
+// Pan
+viewerImage?.addEventListener('mousedown', (e)=>{ isPanning = true; panStartX = e.clientX; panStartY = e.clientY; imgStartX = vX; imgStartY = vY; });
+window.addEventListener('mouseup', ()=>{ isPanning = false; });
+window.addEventListener('mousemove', (e)=>{ if(!isPanning) return; vX = imgStartX + (e.clientX - panStartX); vY = imgStartY + (e.clientY - panStartY); applyViewerTransform(); });
+
+// Close on backdrop click (click outside card)
+imageViewer?.addEventListener('click', (e)=>{ if(e.target === imageViewer){ closeViewer(); } });

@@ -24,13 +24,13 @@ const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
 function toDate(x){ try{ return x?.toDate ? x.toDate() : (x? new Date(x): new Date()); }catch{ return new Date(); } }
 function escapeHTML(s){ return s.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]||c)); }
 
-// Avatar generation from email first letter
+// Avatar generation from email first letter (original)
 async function makeAvatarFromEmail(email){
   try{
     const letter = (email||'?').trim().charAt(0).toUpperCase() || '?';
     const canvas = document.createElement('canvas'); canvas.width=120; canvas.height=120;
     const ctx = canvas.getContext('2d');
-    let h=0; for(const ch of email){ h = (h*31 + ch.charCodeAt(0))>>>0; }
+    let h=0; for(const ch of String(email||'?')){ h = (h*31 + ch.charCodeAt(0))>>>0; }
     const hue = h % 360; ctx.fillStyle = `hsl(${hue},65%,55%)`;
     ctx.fillRect(0,0,120,120);
     ctx.fillStyle = '#ffffff'; ctx.font = '700 64px Inter, Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';

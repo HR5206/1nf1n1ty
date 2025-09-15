@@ -36,25 +36,54 @@ export function initTheme(){
     const isDark = !document.documentElement.classList.contains('dark');
     applyTheme(isDark?'dark':'light');
     localStorage.setItem(THEME_KEY, isDark?'dark':'light');
+    // Refresh theme-dependent assets like the logo
+    try{ initLogo(); }catch{}
   });
 }
 
-// Logo init: set the header logo from one place
+// Logo init: set the header logo from one place (supports light/dark variants)
 const LOGO_KEY = 'sd_logo_src';
+const LOGO_LIGHT_KEY = 'sd_logo_src_light';
+const LOGO_DARK_KEY = 'sd_logo_src_dark';
 export function initLogo(){
   try{
     const el = document.getElementById('siteLogo'); if(!el) return;
-    // Priority: meta tag > localStorage > keep existing
-    const meta = document.querySelector('meta[name="app-logo"]')?.getAttribute('content');
-    const saved = localStorage.getItem(LOGO_KEY);
+    const isDark = document.documentElement.classList.contains('dark');
+    // Meta tags allow specifying per-theme logos
+    const metaSingle = document.querySelector('meta[name="app-logo"]')?.getAttribute('content');
+    const metaLight = document.querySelector('meta[name="app-logo-light"]')?.getAttribute('content');
+    const metaDark  = document.querySelector('meta[name="app-logo-dark"]')?.getAttribute('content');
+    // LocalStorage overrides
+    const savedSingle = localStorage.getItem(LOGO_KEY);
+    const savedLight = localStorage.getItem(LOGO_LIGHT_KEY);
+    const savedDark  = localStorage.getItem(LOGO_DARK_KEY);
     const DEFAULT_SRC = './assets/1nf1n1ty.webp';
     const current = el.getAttribute('src') || '';
     const isPlaceholder = current.startsWith('data:image/gif');
-    const src = meta || saved || (isPlaceholder ? '' : current) || DEFAULT_SRC;
-    if(src) el.setAttribute('src', src);
+    // Resolve best source for current theme
+    const themed = isDark
+      ? (metaDark || savedDark)
+      : (metaLight || savedLight);
+    const fallback = metaSingle || savedSingle || (isPlaceholder ? '' : current) || DEFAULT_SRC;
+    const src = themed || fallback;
+    if(src && el.getAttribute('src') !== src) el.setAttribute('src', src);
   }catch{}
 }
-export function setLogo(src){ try{ if(src){ localStorage.setItem(LOGO_KEY, src); $('#siteLogo')?.setAttribute('src', src); } }catch{} }
+export function setLogo(src){
+  try{
+    if(src){
+      localStorage.setItem(LOGO_KEY, src);
+      $('#siteLogo')?.setAttribute('src', src);
+    }
+  }catch{}
+}
+export function setLogoForTheme(srcLight, srcDark){
+  try{
+    if(srcLight) localStorage.setItem(LOGO_LIGHT_KEY, srcLight);
+    if(srcDark)  localStorage.setItem(LOGO_DARK_KEY, srcDark);
+    initLogo();
+  }catch{}
+}
 
 // Utils
 export function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]||c)); }
@@ -64,11 +93,12 @@ export function sanitizeUsername(s){
   return v.slice(0, 30);
 }
 export async function makeAvatarFromEmail(email){
+  // Original simple canvas-based letter avatar
   try{
     const letter = (email||'?').trim().charAt(0).toUpperCase() || '?';
     const canvas = document.createElement('canvas'); canvas.width=120; canvas.height=120;
     const ctx = canvas.getContext('2d');
-    let h=0; for(const ch of email){ h = (h*31 + ch.charCodeAt(0))>>>0; }
+    let h=0; for(const ch of String(email||'?')){ h = (h*31 + ch.charCodeAt(0))>>>0; }
     const hue = h % 360; ctx.fillStyle = `hsl(${hue},65%,55%)`;
     ctx.fillRect(0,0,120,120);
     ctx.fillStyle='#fff'; ctx.font='700 64px Inter, Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';

@@ -30,7 +30,7 @@ async function makeAvatarFromEmail(email){
     const letter = (email||'?').trim().charAt(0).toUpperCase() || '?';
     const canvas = document.createElement('canvas'); canvas.width=120; canvas.height=120;
     const ctx = canvas.getContext('2d');
-    let h=0; for(const ch of email){ h = (h*31 + ch.charCodeAt(0))>>>0; }
+    let h=0; for(const ch of String(email||'?')){ h = (h*31 + ch.charCodeAt(0))>>>0; }
     const hue = h % 360; ctx.fillStyle = `hsl(${hue},65%,55%)`;
     ctx.fillRect(0,0,120,120);
     ctx.fillStyle='#fff'; ctx.font='700 64px Inter, Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -359,7 +359,7 @@ $('#app')?.addEventListener('click', async (e)=>{
     const likes = await pb.collection('likes').getFullList({ filter: `post="${pid}"`, expand: 'user' });
     const ul = $('#likesList');
     ul.innerHTML = likes.length? likes.map(l=>{
-      const u = l.expand?.user; const av = u?.avatar? pb.files.getUrl(u, u.avatar, { thumb:'32x32' }): 'https://placehold.co/32x32';
+      const u = l.expand?.user; const av = u?.avatar? pb.files.getUrl(u, u.avatar, { thumb:'32x32' }) : 'https://placehold.co/32x32';
       const name = displayName(u);
       return `<li class="row"><img class="avatar" style="width:32px;height:32px" src="${av}" alt=""/><span>${name}</span></li>`;
     }).join('') : '<li class="muted">No likes yet</li>';
