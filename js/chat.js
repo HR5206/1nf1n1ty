@@ -21,7 +21,8 @@ function roomId(a, b){ const arr=[a,b].sort(); return `dm:${arr[0]}::${arr[1]}`;
 
 let unsubUsers=null; let unsubChat=null; let currentPeer=null;
 let allUsersCache = [];
-const CONTACTS_KEY = 'sd_chat_contacts';
+// Namespace contacts per user to avoid cross-account mixing in localStorage
+const CONTACTS_KEY = me ? `sd_chat_contacts:${me.id}` : 'sd_chat_contacts';
 let existingPeerIds = new Set();
 let pickerBase = [];
 // Unread tracking (per user) using last-read timestamps per peerId in localStorage
@@ -61,12 +62,55 @@ function loadContacts(){
   try{ return sanitizeContacts(JSON.parse(localStorage.getItem(CONTACTS_KEY)||'[]')); }catch{ return []; }
 }
 function saveContacts(list){ try{ localStorage.setItem(CONTACTS_KEY, JSON.stringify(sanitizeContacts(list)||[])); }catch{} }
-// One-time migration to ensure chat list starts empty for everyone
+// One-time migrations:
+// - v1: initial clear
+// - v2: force clear contacts globally once more
+// - v3: namespacing contacts per user; remove old global key to prevent cross-account leak
 try{
-  const migrated = localStorage.getItem('sd_chat_contacts_migrated_v1');
-  if(!migrated){
+  const v1 = localStorage.getItem('sd_chat_contacts_migrated_v1');
+  const v2 = localStorage.getItem('sd_chat_contacts_migrated_v2');
+  const v3 = localStorage.getItem('sd_chat_contacts_migrated_v3');
+  const v4 = localStorage.getItem('sd_chat_contacts_migrated_v4');
+  const v5 = localStorage.getItem('sd_chat_contacts_migrated_v5');
+  if(!v1){
     localStorage.removeItem(CONTACTS_KEY);
     localStorage.setItem('sd_chat_contacts_migrated_v1', '1');
+  }
+  if(!v2){
+    localStorage.removeItem(CONTACTS_KEY);
+    localStorage.setItem('sd_chat_contacts_migrated_v2', '1');
+    try{ localStorage.setItem('sd_chat_contacts_reset_at', new Date().toISOString()); }catch{}
+  }
+  if(!v3){
+    // Remove old global key unconditionally to avoid showing contacts from other signed-in users
+    try{ localStorage.removeItem('sd_chat_contacts'); }catch{}
+    localStorage.setItem('sd_chat_contacts_migrated_v3', '1');
+  }
+  if(!v4){
+    // Clear all possible keys related to contacts (global and per-user patterns)
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(!k) continue;
+        if(k=== 'sd_chat_contacts' || k.startsWith('sd_chat_contacts:')){
+          try{ localStorage.removeItem(k); }catch{}
+        }
+      }
+    }catch{}
+    try{ localStorage.setItem('sd_chat_contacts_reset_at', new Date().toISOString()); }catch{}
+    localStorage.setItem('sd_chat_contacts_migrated_v4', '1');
+  }
+  if(!v5){
+    try{
+      const keys = [];
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(k && (k=== 'sd_chat_contacts' || k.startsWith('sd_chat_contacts:'))){ keys.push(k); }
+      }
+      for(const k of keys){ try{ localStorage.removeItem(k); }catch{} }
+    }catch{}
+    try{ localStorage.setItem('sd_chat_contacts_reset_at', new Date().toISOString()); }catch{}
+    localStorage.setItem('sd_chat_contacts_migrated_v5', '1');
   }
 }catch{}
 function upsertContact(user){
@@ -181,6 +225,7 @@ chatList?.addEventListener('click', async (e)=>{
 
 subscribeUsers();
 await refreshExistingPeers();
+await hydrateContactsFromIncoming?.();
 await recomputeAllUnreadCounts();
 
 // Build the set of peers you've already chatted with (either direction)
@@ -196,6 +241,28 @@ async function refreshExistingPeers(){
     existingPeerIds = s;
   }catch{ existingPeerIds = new Set(); }
 }
+
+// Ensure any past incoming senders appear in contacts so the receiver sees the chat without manual add
+async function hydrateContactsFromIncoming(){
+  if(!me) return;
+  try{
+    const resetAt = localStorage.getItem('sd_chat_contacts_reset_at');
+    let q = sb.from('messages').select('sender, created_at').eq('receiver', me.id);
+    if(resetAt){ q = q.gt('created_at', resetAt); }
+    const { data: msgs } = await q;
+    const uniqueSenders = Array.from(new Set((msgs||[]).map(m=> m.sender).filter(Boolean)));
+    if(!uniqueSenders.length) return;
+    const contacts = loadContacts();
+    const have = new Set((contacts||[]).map(c=> String(c.id)));
+    const toAdd = uniqueSenders.filter(id=> !have.has(String(id)) && String(id)!==String(me.id));
+    if(!toAdd.length) return;
+    const { data: profs } = await sb.from('profiles').select('id, username, email, avatar_url, bio').in('id', toAdd);
+    const list = Array.isArray(profs)? profs : toAdd.map(id=> ({ id }));
+    for(const u of list){ upsertContact(u); }
+  }catch{}
+}
+
+// Removed past hydration: keep lists empty until user adds new contacts or receives new messages
 
 // New chat button opens user picker
 newChatBtn?.addEventListener('click', async ()=>{
