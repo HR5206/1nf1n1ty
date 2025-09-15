@@ -830,20 +830,36 @@ html.dark .comment-input .btn:hover{ background:#d70b4d; color:#ffffff; box-shad
 	border: 1px solid var(--border);
 }
 .message { position: relative; }
+.message { padding-right: 36px; }
 .message .msg-del{
-	margin-left: 8px;
-	background: transparent;
-	border: none;
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	width: 28px;
+	height: 28px;
+	border-radius: 999px;
+	display: grid;
+	place-items: center;
+	border: 1px solid var(--border);
+	background: rgba(0,0,0,0.06);
+	color: var(--text);
 	cursor: pointer;
-	color: var(--muted);
-	float: right;
-	opacity: 0;
-	transition: opacity .15s ease;
+	opacity: .85;
+	transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
-.message:hover .msg-del,
-.message:focus-within .msg-del{ opacity: 1; }
 .message .msg-del:hover,
-.message .msg-del:focus-visible{ color: var(--text); }
+.message .msg-del:focus-visible{
+	transform: translateY(-1px);
+	box-shadow: 0 4px 10px rgba(0,0,0,.15);
+	opacity: 1;
+}
+/* High-contrast surface in dark theme */
+html.dark .message .msg-del{
+	background: rgba(255,255,255,0.12);
+	border-color: rgba(255,255,255,0.18);
+	color: #ffffff;
+	box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
 .message.out {
 	align-self: flex-end;
 	background: var(--primary);

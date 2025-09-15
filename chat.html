@@ -36,6 +36,24 @@
       </div>
     </div>
   </main>
+  <!-- New chat user picker modal -->
+  <dialog id="userPicker">
+    <div class="card">
+      <h3 style="margin-top:0">Start a new chat</h3>
+      <div class="row" style="gap:8px; margin: 4px 0 10px">
+        <input type="text" id="userSearch" class="pill-input" placeholder="Search users..." style="flex:1" />
+      </div>
+      <ul id="userPickerList" class="friends-list" style="max-height: 60vh"></ul>
+      <div class="row" style="justify-content:flex-end;margin-top:10px"><button id="closeUserPicker" class="btn">Close</button></div>
+    </div>
+  </dialog>
+  <style>
+    /* Modal styling similar to Likes/Comments */
+    #userPicker { padding: 0; border: none; background: transparent; }
+    #userPicker::backdrop { background: rgba(0,0,0,.6); }
+    #userPicker .card { min-width: 320px; max-width: 640px; color: var(--text); }
+    html.dark #userPicker .card{ color: #ffffff; }
+  </style>
   <script type="module" src="./js/shared.js"></script>
   <script type="module">
     import { initLogo } from './js/shared.js';
