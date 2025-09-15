@@ -39,6 +39,23 @@ export function initTheme(){
   });
 }
 
+// Logo init: set the header logo from one place
+const LOGO_KEY = 'sd_logo_src';
+export function initLogo(){
+  try{
+    const el = document.getElementById('siteLogo'); if(!el) return;
+    // Priority: meta tag > localStorage > keep existing
+    const meta = document.querySelector('meta[name="app-logo"]')?.getAttribute('content');
+    const saved = localStorage.getItem(LOGO_KEY);
+    const DEFAULT_SRC = './assets/1nf1n1ty.webp';
+    const current = el.getAttribute('src') || '';
+    const isPlaceholder = current.startsWith('data:image/gif');
+    const src = meta || saved || (isPlaceholder ? '' : current) || DEFAULT_SRC;
+    if(src) el.setAttribute('src', src);
+  }catch{}
+}
+export function setLogo(src){ try{ if(src){ localStorage.setItem(LOGO_KEY, src); $('#siteLogo')?.setAttribute('src', src); } }catch{} }
+
 // Utils
 export function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]||c)); }
 export function toDate(x){ try{ return x? new Date(x): new Date(); }catch{ return new Date(); } }
@@ -108,8 +125,9 @@ export async function uploadImage(path, file){ return sb.storage.from(IMAGES_BUC
 
 // Realtime helper
 export function subscribeTable(table, filter, handler){
-  const chan = sb.channel(`realtime:${table}:${Math.random().toString(36).slice(2)}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table, filter }, payload => handler(payload))
-    .subscribe();
+  const chan = sb.channel(`realtime:${table}:${Math.random().toString(36).slice(2)}`);
+  const details = { event: '*', schema: 'public', table };
+  if (filter && String(filter).trim().length) details.filter = filter;
+  chan.on('postgres_changes', details, payload => handler(payload)).subscribe();
   return ()=>{ try{ sb.removeChannel(chan); }catch{} };
 }

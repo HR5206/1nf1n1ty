@@ -1,4 +1,4 @@
-import { sb, $, $$, initTheme, ensureAuthedOrRedirect, displayName, initNavAuthControls, subscribeTable, imageUrl } from './shared.js';
+import { sb, $, $$, initTheme, ensureAuthedOrRedirect, displayName, initNavAuthControls, subscribeTable, imageUrl, escapeHTML } from './shared.js';
 
 initTheme();
 initNavAuthControls();
@@ -49,7 +49,12 @@ function subscribeChat(){
   const filter = `room=eq.${room}`;
   const handler = async ()=>{
     const { data: msgs } = await sb.from('messages').select('id, text, sender, receiver, created_at').eq('room', room).order('created_at', { ascending: true });
-    chatList.innerHTML = msgs.map(m=> `<li class="message ${m.sender===me.id?'out':'in'}">${(m.text||'')}</li>`).join('');
+    chatList.innerHTML = (msgs||[]).map(m=>{
+      const own = m.sender===me.id;
+      const text = escapeHTML(m.text||'');
+      const delBtn = own ? '<button class="msg-del" title="Delete" aria-label="Delete message">🗑</button>' : '';
+      return `<li class="message ${own?'out':'in'}" data-id="${m.id}">${text}${delBtn}</li>`;
+    }).join('');
     chatList.scrollTop = chatList.scrollHeight;
   };
   handler();
@@ -63,6 +68,26 @@ chatForm?.addEventListener('submit', async (e)=>{
   const room = roomId(me.id, currentPeer.id);
   await sb.from('messages').insert({ room, text, sender: me.id, receiver: currentPeer.id });
   chatInput.value='';
+});
+
+// Delete message (only own outgoing messages)
+chatList?.addEventListener('click', async (e)=>{
+  const btn = e.target.closest?.('.msg-del');
+  if(!btn) return;
+  const li = btn.closest?.('li.message');
+  const id = li?.dataset?.id;
+  if(!id) return;
+  // Basic confirm
+  const ok = window.confirm('Delete this message?');
+  if(!ok) return;
+  // Guard: delete only if you are the sender (RLS should also enforce this server-side)
+  const { error } = await sb.from('messages').delete().eq('id', id).eq('sender', me?.id||'');
+  if(error){
+    alert('Failed to delete message: ' + (error.message||'Unknown error'));
+    return;
+  }
+  // Optimistic remove; realtime will also refresh the list
+  try{ li.remove(); }catch{}
 });
 
 subscribeUsers();

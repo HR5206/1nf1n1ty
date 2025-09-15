@@ -18,7 +18,7 @@
 <body>
   <noscript>This app requires JavaScript enabled.</noscript>
   <header class="app-header">
-    <div class="brand"><img src="./assets/icon.svg" alt="1nf1n1ty" width="28" height="28"/><span>1nf1n1ty</span></div>
+  <div class="brand"><img id="siteLogo" class="site-logo" src="./assets/1nf1n1ty.webp" alt="Logo" /></div>
     <div class="actions"><button id="themeToggle" title="Toggle theme" class="btn">🌓</button></div>
   </header>
 
@@ -101,7 +101,9 @@
 
   <script type="module">
     import { sb, $, initTheme, makeAvatarFromEmail, dataUrlToBlob, uploadImage } from './js/shared.js';
+    import { initLogo } from './js/shared.js';
     initTheme();
+    initLogo();
     const err = $('#authPageError');
     const avatarPathFor = (uid)=> `avatars/${uid}.png`;
 
@@ -174,6 +176,7 @@
             await uploadImage(path, blob);
             await sb.from('profiles').update({ avatar_url: path }).eq('id', userId);
           }catch{}
+          try { localStorage.setItem('sd_theme','dark'); } catch {}
           location.href='./feed.html';
         }catch(ex){ err.textContent = ex?.message || 'Sign up failed'; err.hidden = false; }
       }else{
@@ -182,6 +185,7 @@
         try{
           const { error } = await sb.auth.signInWithPassword({ email, password });
           if(error) throw error;
+          try { localStorage.setItem('sd_theme','dark'); } catch {}
           location.href='./feed.html';
         }catch(ex){ err.textContent = ex?.message || 'Login failed'; err.hidden = false; }
       }

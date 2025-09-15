@@ -223,7 +223,7 @@ function subscribeLikes(postId){
     const liked = !!(me && list.some(l=> l.user === me.id));
     const likeBtn = document.querySelector(`[data-like="${postId}"]`);
     const likesDiv = document.querySelector(`[data-likes="${postId}"]`);
-    if(likeBtn){ likeBtn.textContent = liked? '💙 Liked' : '❤ Like'; }
+  if(likeBtn){ likeBtn.textContent = liked? '❤ Liked' : '❤ Like'; likeBtn.classList.toggle('active', !!liked); }
     if(likesDiv){ const n=list.length; likesDiv.textContent = n? `${n} ${n===1?'like':'likes'}` : ''; }
   };
   // Initial render

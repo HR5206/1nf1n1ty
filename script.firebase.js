@@ -176,7 +176,7 @@ function subscribeLikes(postId){
     const likesDiv = document.querySelector(`[data-likes="${postId}"]`);
     const count = snap.size;
     const liked = !!(me && snap.docs.some(d=> d.id===me.uid));
-    if(likeBtn){ likeBtn.textContent = liked? '💙 Liked' : '❤ Like'; }
+    if(likeBtn){ likeBtn.textContent = liked? '\u2764 Liked' : '\u2764 Like'; likeBtn.classList.toggle('active', !!liked); }
     if(likesDiv){ likesDiv.textContent = count? `${count} ${count===1?'like':'likes'}` : ''; }
   });
   unsubLikes.set(postId, unsub);

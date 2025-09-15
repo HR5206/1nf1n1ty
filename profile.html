@@ -10,12 +10,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script>try{ if(localStorage.getItem('sd_theme')==='dark'){ document.documentElement.classList.add('dark'); } }catch{}</script>
   <link rel="stylesheet" href="./styles.css" />
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
 </head>
 <body>
   <header class="app-header">
-    <div class="brand"><img src="./assets/icon.svg" alt="Team 1nf1n1ty" width="28" height="28"/><span>Team 1nf1n1ty</span></div>
+  <div class="brand"><img id="siteLogo" class="site-logo" src="./assets/1nf1n1ty.webp" alt="Logo" /></div>
     <nav class="nav">
       <a class="nav-btn" href="./feed.html">Feed</a>
       <a class="nav-btn" href="./profile.html">Profile</a>
@@ -53,6 +54,10 @@
     </section>
   </main>
   <script type="module" src="./js/shared.js"></script>
+  <script type="module">
+    import { initLogo } from './js/shared.js';
+    initLogo();
+  </script>
   <script type="module" src="./js/profile.js"></script>
 </body>
 </html>

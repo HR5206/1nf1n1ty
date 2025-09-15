@@ -49,7 +49,10 @@ function subscribeLikes(postId){
     const likeBtn = document.querySelector(`[data-like="${postId}"]`);
     const likesDiv = document.querySelector(`[data-likes="${postId}"]`);
     const liked = !!(me && list?.some(l=> l.user_id === me.id));
-    if(likeBtn){ likeBtn.textContent = liked? '💙 Liked' : '❤ Like'; }
+    if(likeBtn){
+      likeBtn.textContent = liked? '❤️ Liked' : '❤️ Like';
+      likeBtn.classList.toggle('active', !!liked);
+    }
     const n = list?.length||0; if(likesDiv){ likesDiv.textContent = n? `${n} ${n===1?'like':'likes'}` : ''; }
   };
   handler();
@@ -129,10 +132,14 @@ postSubmit?.addEventListener('click', async ()=>{
   // Ensure my profile row exists (in case signup bypassed profile upsert)
   try{ await sb.from('profiles').upsert({ id: me.id, email: me.email }, { onConflict: 'id' }); }catch{}
   const { data: rec, error } = await sb.from('posts').insert({ user_id: me.id, caption }).select('id').single();
+  // Optimistically refresh feed so the new post appears immediately
+  try{ await loadAndRenderFeed(); }catch{}
   if(!error && rec && fileBlob){
     const path = `posts/${rec.id}.jpg`;
     await uploadImage(path, fileBlob);
     await sb.from('posts').update({ image_path: path }).eq('id', rec.id);
+    // Refresh again so the image shows once uploaded
+    try{ await loadAndRenderFeed(); }catch{}
   }
   // Reset uploader UI
   postImage.value=''; captionEl.value=''; captionCount.textContent='0'; hidePreview();
@@ -173,8 +180,8 @@ $('#app')?.addEventListener('click', async (e)=>{
     const pid = likeBtn.getAttribute('data-like');
   if(!me) return;
   const { data: existing } = await sb.from('likes').select('id').eq('post_id', pid).eq('user_id', me.id).limit(1);
-  if(existing && existing.length){ await sb.from('likes').delete().eq('id', existing[0].id); }
-  else { await sb.from('likes').insert({ post_id: pid, user_id: me.id }); }
+  if(existing && existing.length){ await sb.from('likes').delete().eq('id', existing[0].id); likeBtn.textContent='❤ Like'; likeBtn.classList.remove('active'); }
+  else { await sb.from('likes').insert({ post_id: pid, user_id: me.id }); likeBtn.textContent='❤ Liked'; likeBtn.classList.add('active'); }
     return;
   }
   const focusBtn = e.target.closest('[data-comment-focus]');

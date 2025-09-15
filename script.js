@@ -136,14 +136,14 @@ function renderFeed(){
   const avatar = (u && u.avatar_url) ? u.avatar_url : 'https://placehold.co/64x64?text=' + encodeURIComponent((p.user||'?')[0]?.toUpperCase()||'?');
     const likes = getLikes();
     const arr = likes[p.id]||[]; const count = arr.length; const liked = me && arr.includes(me.email);
-    return `<li class="post" data-id="${p.id}">
+  return `<li class="post" data-id="${p.id}">
       <header class="row">
         <img class="avatar" src="${avatar}" alt="avatar"/>
         <div><div><strong>${p.user}</strong></div><div class="muted">${new Date(p.created_at).toLocaleString()}</div></div>
       </header>
   <div class="media" data-media="${p.id}">${p.image_url?`<img loading="lazy" src="${p.image_url}" alt="post media"/>`:''}<div class="dbl-heart" id="h_${p.id}">❤</div></div>
       <div class="actions">
-        <button class="btn" data-like="${p.id}">${liked?'💙 Liked':'❤ Like'}</button>
+  <button class="btn${liked?' active':''}" data-like="${p.id}">${liked?'❤ Liked':'❤ Like'}</button>
         <button class="btn" data-comment-focus="${p.id}">💬 Comment</button>
       </div>
   <div class="likes" data-likes="${p.id}" data-open-likes="${p.id}">${count?`${count} ${count===1?'like':'likes'}`:''}</div>
@@ -335,7 +335,8 @@ document.getElementById('app')?.addEventListener('click', (e)=>{
     setLikes(likes);
     // Update UI in place
     const count = arr.length; const liked = arr.includes(me.email);
-    likeBtn.textContent = liked ? '💙 Liked' : '❤ Like';
+  likeBtn.textContent = liked ? '❤ Liked' : '❤ Like';
+  likeBtn.classList.toggle('active', !!liked);
     const likesEl = document.querySelector(`[data-likes="${postId}"]`);
     if(likesEl) likesEl.textContent = count?`${count} ${count===1?'like':'likes'}`:'';
     return;
