@@ -289,6 +289,10 @@ html.dark body{
 	border-bottom: 1px solid var(--border);
 	box-shadow: var(--shadow);
 }
+/* Slightly increase vertical breathing room in header */
+.app-header { padding-top: 20px; padding-bottom: 22px; }
+/* Add a touch of vertical margin around nav pills in header */
+.app-header .nav { margin: 6px 0 8px; }
 /* Light theme header: flat white with soft divider */
 html:not(.dark) .app-header{
 	background: #ffffff;
@@ -667,34 +671,9 @@ html.dark .post .actions .btn.active{
 	margin: 0;
 }
 .likes-row .comments-count:hover{ text-decoration: underline; }
-.post .caption { padding: 10px 16px; }
-/* Reserve a consistent line height in likes row even when empty */
-.likes-row{ min-height: 24px; }
-/* Caption + composer on same line */
-.caption-row{ display:flex; align-items:center; gap:12px; padding:10px 16px; border-top:1px solid var(--border); }
-.caption-row .caption{
-	flex: 1 1 auto;
-	min-width: 0;
-	padding: 0;
-	/* Show up to two lines of caption, then ellipsis */
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	line-clamp: 2; /* standard property */
-	-webkit-box-orient: vertical;
-	overflow: hidden;
+.post .caption {
+	padding: 10px 16px;
 }
-.caption-row .comment-input{
-	padding: 0;
-	border-top: none;
-	gap: 10px;
-	flex: 0 0 auto; /* don’t let it steal space from caption */
-}
-.caption-row .comment-input input{
-	height: 40px;
-	/* Keep a reasonable, responsive width so caption can breathe */
-	width: clamp(160px, 34vw, 260px);
-}
-.caption-row .comment-input .btn{ height:40px; padding:8px 14px; }
 .comments {
 	list-style: none;
 	margin: 0;
