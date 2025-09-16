@@ -240,7 +240,10 @@ html.dark .auth-brand span{ color: #fff; }
 * {
 	box-sizing: border-box;
 	transition: all .3s ease;
+	/* Remove blue tap highlight on Android/Chrome and other WebKit-based browsers */
+	-webkit-tap-highlight-color: transparent;
 }
+*::before, *::after{ -webkit-tap-highlight-color: transparent; }
 html, body {
 	height: 100%;
 	margin: 0;
@@ -250,6 +253,19 @@ body {
 	background: var(--bg);
 	color: var(--text);
 	-webkit-font-smoothing: antialiased;
+}
+/* On touch devices, suppress default focus outlines (we keep our custom :focus-visible styles) */
+@media (pointer: coarse) {
+	a:focus,
+	button:focus,
+	input:focus,
+	textarea:focus,
+	select:focus,
+	[role="button"]:focus,
+	.btn:focus,
+	.nav-btn:focus { outline: none; }
+	/* Avoid text selection flashes on taps */
+	a, button, [role="button"], .btn, .nav-btn { -webkit-user-select: none; user-select: none; }
 }
 /* Tasteful dark background gradient/texture when in dark mode */
 html.dark body{
@@ -1071,4 +1087,24 @@ progress {
 	.grid {
 		grid-template-columns: repeat(2, 1fr);
 	}
+	/* Mobile header: keep actions visible, move nav below */
+	.app-header{
+		flex-wrap: wrap;
+		padding: 12px 14px;
+		gap: 8px 12px;
+	}
+	.site-logo{ height: 42px; max-height: 42px; }
+	.actions{ margin-left: auto; }
+	#themeToggle{ width: 40px; height: 40px; }
+	/* Place nav on its own row and allow wrapping */
+	.nav{
+		order: 3;
+		width: 100%;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	.nav .nav-btn{ padding: 8px 12px; }
+	/* Slightly tighter auth buttons so Logout fits */
+	#logoutBtn, #loginBtn{ padding: 8px 12px; }
 }
