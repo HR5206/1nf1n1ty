@@ -68,7 +68,7 @@ function subscribeLikes(postId){
       likeBtn.textContent = liked? '❤️ Liked' : '❤️ Like';
       likeBtn.classList.toggle('active', !!liked);
     }
-    const n = total||0; if(likesDiv){ likesDiv.textContent = n? `${n} ${n===1?'like':'likes'}` : ''; }
+  const n = total||0; if(likesDiv){ likesDiv.textContent = `${n} ${n===1?'like':'likes'}`; }
   };
   handler();
   unsubLikes.set(postId, subscribeTable('likes', `post_id=eq.${postId}`, handler));
@@ -270,8 +270,24 @@ $('#app')?.addEventListener('click', async (e)=>{
     const pid = likeBtn.getAttribute('data-like');
   if(!me) return;
   const { data: existing } = await sb.from('likes').select('id').eq('post_id', pid).eq('user_id', me.id).limit(1);
-  if(existing && existing.length){ await sb.from('likes').delete().eq('id', existing[0].id); likeBtn.textContent='❤ Like'; likeBtn.classList.remove('active'); }
-  else { await sb.from('likes').insert({ post_id: pid, user_id: me.id }); likeBtn.textContent='❤ Liked'; likeBtn.classList.add('active'); }
+  const likesDiv = document.querySelector(`[data-likes="${pid}"]`);
+  // Parse current displayed count for optimistic update
+  let n = 0;
+  if(likesDiv){
+    const m = /^(\d+)/.exec(likesDiv.textContent||'');
+    n = m ? parseInt(m[1], 10) : 0;
+  }
+  if(existing && existing.length){
+    // Optimistically decrement
+    if(likesDiv){ likesDiv.textContent = `${Math.max(0, n-1)} ${n-1===1?'like':'likes'}`; }
+    likeBtn.textContent='❤ Like'; likeBtn.classList.remove('active');
+    await sb.from('likes').delete().eq('id', existing[0].id);
+  } else {
+    // Optimistically increment
+    if(likesDiv){ likesDiv.textContent = `${n+1} ${(n+1)===1?'like':'likes'}`; }
+    likeBtn.textContent='❤ Liked'; likeBtn.classList.add('active');
+    await sb.from('likes').insert({ post_id: pid, user_id: me.id });
+  }
     return;
   }
   // Comment button opens the comments modal

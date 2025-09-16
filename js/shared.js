@@ -154,33 +154,11 @@ export async function getUser(){ try{ const r = await sb.auth.getUser(); return 
 export async function ensureAuthedOrRedirect(){ const u = await getUser(); if(!u){ location.href = './index.html'; return false; } return true; }
 
 export function initNavAuthControls(){
-  const authActions = $('#authActions');
   const loginBtn = $('#loginBtn');
   const logoutBtn = $('#logoutBtn');
-
-  const applyState = (user)=>{
-    if(user){
-      loginBtn?.setAttribute('hidden','');
-      logoutBtn?.removeAttribute('hidden');
-    } else {
-      logoutBtn?.setAttribute('hidden','');
-      loginBtn?.removeAttribute('hidden');
-    }
-    if(authActions){ authActions.style.visibility = 'visible'; }
-  };
-
-  // If we already have a user synchronously, apply immediately and reveal.
-  const uSync = getUserSync();
-  if(uSync) {
-    applyState(uSync);
-  }
-  // Fetch actual user state, then reveal controls without flicker
-  sb.auth.getUser()
-    .then(({ data })=> applyState(data?.user || null))
-    .catch(()=> applyState(null));
-  // Keep in sync with subsequent auth changes
-  sb.auth.onAuthStateChange((_evt, session)=> applyState(session?.user || null));
-
+  const refresh = ()=>{ const u = getUserSync(); if(u){ loginBtn?.setAttribute('hidden',''); logoutBtn?.removeAttribute('hidden'); } else { logoutBtn?.setAttribute('hidden',''); loginBtn?.removeAttribute('hidden'); } };
+  refresh();
+  sb.auth.onAuthStateChange(()=> refresh());
   logoutBtn?.addEventListener('click', async ()=>{ await sb.auth.signOut(); location.href='./index.html'; });
 }
 
