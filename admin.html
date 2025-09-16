@@ -126,7 +126,9 @@
         adminLogin.style.display='none';
         adminLogout.style.display='inline-block';
         sessionInfo.textContent = `Signed in as ${data.user?.email||''}`;
-        setAdminUIEnabled(isWhitelistedAdminEmail(data.user?.email));
+        const isAdmin = isWhitelistedAdminEmail(data.user?.email);
+        setAdminUIEnabled(isAdmin);
+        if(isAdmin){ await loadUsers(); }
       }catch(ex){ sessionInfo.textContent = ex?.message||'Login failed'; }
     });
     adminLogout?.addEventListener('click', async ()=>{ await sb.auth.signOut(); adminLogin.style.display='inline-block'; adminLogout.style.display='none'; sessionInfo.textContent = 'Signed out'; setAdminUIEnabled(false); });
@@ -137,7 +139,9 @@
         adminLogin.style.display='none';
         adminLogout.style.display='inline-block';
         sessionInfo.textContent = `Signed in as ${data.user.email}`;
-        setAdminUIEnabled(isWhitelistedAdminEmail(data.user.email));
+        const isAdmin = isWhitelistedAdminEmail(data.user.email);
+        setAdminUIEnabled(isAdmin);
+        if(isAdmin){ await loadUsers(); }
       } else {
         setAdminUIEnabled(false);
       }
@@ -192,7 +196,8 @@
     }
 
     async function loadUsers(){
-      const tbody = $('#usersTbody'); tbody.innerHTML = '<tr><td colspan="4" class="muted-sm">Loading…</td></tr>';
+      const tbody = $('#usersTbody');
+      tbody.innerHTML = '<tr><td colspan="4" class="muted-sm">Loading…</td></tr>';
       try{
         const rows = await fetchUsers();
         if(!rows.length){ tbody.innerHTML = '<tr><td colspan="4" class="muted-sm">No users</td></tr>'; return; }
@@ -209,12 +214,24 @@
             </td>
           </tr>`;
         }).join('');
-      }catch{ tbody.innerHTML = '<tr><td colspan="4" class="muted-sm">Failed to load users</td></tr>'; }
+      }catch(ex){
+        try{
+          const { data } = await sb.auth.getUser();
+          const authedEmail = data?.user?.email || '';
+          if(!authedEmail || !isWhitelistedAdminEmail(authedEmail)){
+            tbody.innerHTML = `<tr><td colspan="4" class="muted-sm">Not authorized. Sign in as ${ADMIN_EMAIL} to view users.</td></tr>`;
+          } else {
+            tbody.innerHTML = `<tr><td colspan="4" class="muted-sm">Failed to load users: ${(ex?.message||'Unknown error')}</td></tr>`;
+          }
+        }catch{
+          tbody.innerHTML = `<tr><td colspan="4" class="muted-sm">Failed to load users.</td></tr>`;
+        }
+      }
     }
 
   $('#reloadUsers')?.addEventListener('click', loadUsers);
     $('#userSearch')?.addEventListener('input', ()=>{ loadUsers(); });
-    await loadUsers();
+  // Do not auto-load on boot; will load after session check if admin
 
     // Row actions
     document.body.addEventListener('click', async (e)=>{
