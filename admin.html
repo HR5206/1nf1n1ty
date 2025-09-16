@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Uses the same Supabase project as the app -->
+  <meta name="supabase-url" content="https://xrpsysmgyhnjpztgervr.supabase.co" />
+  <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycHN5c21neWhuanB6dGdlcnZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NTcwMTgsImV4cCI6MjA3MzQzMzAxOH0.sLFqsvbQSXdtzgvH-bMsTuItL8K_FMUl0_Y4gtG7iXQ" />
+  <title>Admin (Hidden)</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    .admin-wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    .admin-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    .admin-grid .card h2 { margin: 0 0 10px; }
+    .muted-sm { color: var(--muted); font-size: .95em; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; }
+    .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .danger { background: #2b1a22; color: #fff; border: 1px solid #d70b4d; }
+    .pill { border: 1px solid var(--border); padding: 10px 12px; border-radius: 999px; background: var(--card); color: var(--text); }
+    .w100 { width: 100%; }
+    .nowrap { white-space: nowrap; }
+    .admin-banner { padding: 8px 12px; border: 1px dashed var(--border); border-radius: 10px; background: rgba(215,11,77,.06); }
+    .admin-banner strong { color: #d70b4d; }
+  </style>
+</head>
+<body>
+  <main class="admin-wrap">
+    <div class="card admin-banner">
+      <div><strong>Hidden Admin Page</strong> — for maintenance only. Do NOT expose publicly. Do not paste your Service Role Key unless you trust this environment.</div>
+    </div>
+
+    <div class="admin-grid">
+      <section class="card">
+        <h2>Session</h2>
+        <div class="row" style="flex-wrap:wrap">
+          <input id="adminEmail" class="pill-input" type="email" placeholder="Admin email" style="min-width:260px" />
+          <input id="adminPassword" class="pill-input" type="password" placeholder="Password" style="min-width:220px" />
+          <button id="adminLogin" class="btn gradient">Login</button>
+          <button id="adminLogout" class="btn" style="display:none">Logout</button>
+          <span id="sessionInfo" class="muted-sm"></span>
+        </div>
+      </section>
+
+      <section class="card" data-admin-section>
+        <h2>Service Role (optional)</h2>
+        <p class="muted-sm">Paste Service Role Key to enable user creation/deletion and cross-user deletes via Admin API. Key is held in-memory only.</p>
+        <div class="row" style="flex-wrap:wrap">
+          <input id="serviceKey" class="pill-input w100" type="password" placeholder="supabase service role key" />
+          <button id="setServiceKey" class="btn">Set key</button>
+          <span id="serviceStatus" class="muted-sm">Not set</span>
+        </div>
+      </section>
+
+      <section class="card" data-admin-section>
+        <h2>Create user (Auth)</h2>
+        <p class="muted-sm">Requires Service Role Key (uses Auth Admin API). Also upserts a profile row.</p>
+        <div class="row" style="flex-wrap:wrap">
+          <input id="newEmail" class="pill-input" type="email" placeholder="user@example.com" style="min-width:260px" />
+          <input id="newPassword" class="pill-input" type="password" placeholder="password" style="min-width:200px" />
+          <input id="newUsername" class="pill-input" type="text" placeholder="optional username" style="min-width:200px" />
+          <button id="createUser" class="btn gradient">Create</button>
+        </div>
+        <p id="createUserMsg" class="muted-sm"></p>
+      </section>
+
+      <section class="card" data-admin-section>
+        <h2>Users</h2>
+        <div class="row" style="flex-wrap:wrap; margin-bottom:8px">
+          <input id="userSearch" class="pill-input" type="text" placeholder="Search email or username..." style="flex:1; min-width:260px" />
+          <button id="reloadUsers" class="btn">Reload</button>
+        </div>
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Username</th>
+                <th class="nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTbody"></tbody>
+          </table>
+        </div>
+        <p class="muted-sm">Tip: "Delete Auth user" requires Service Role. Use with caution.</p>
+      </section>
+    </div>
+  </main>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { $, initTheme } from './js/shared.js';
+    initTheme();
+
+    function readMeta(name){ try{ return document.querySelector(`meta[name="${name}"]`)?.getAttribute('content')||''; }catch{ return ''; } }
+    const SB_URL = readMeta('supabase-url');
+    const SB_ANON = readMeta('supabase-anon-key');
+
+    const sb = createClient(SB_URL, SB_ANON, { auth: { persistSession: true, autoRefreshToken: true } });
+    let adminSb = null; // created after service key is set
+    const ADMIN_EMAIL = 'harishraghav@outlook.in';
+
+    // Simple UI gate helpers
+    function setAdminUIEnabled(enabled){
+      const sections = document.querySelectorAll('[data-admin-section]');
+      sections.forEach(s => s.style.display = enabled ? '' : 'none');
+      const gated = document.querySelectorAll('[data-admin-only]');
+      gated.forEach(el => el.setAttribute('aria-disabled', enabled ? 'false' : 'true'));
+    }
+    function isServiceRole(){ return !!adminSb; }
+    function isWhitelistedAdminEmail(email){ return (email||'').toLowerCase() === ADMIN_EMAIL; }
+
+    // Session controls
+    const sessionInfo = $('#sessionInfo');
+    const adminLogin = $('#adminLogin');
+    const adminLogout = $('#adminLogout');
+    adminLogin?.addEventListener('click', async ()=>{
+      const email = $('#adminEmail').value.trim();
+      const password = $('#adminPassword').value;
+      sessionInfo.textContent = '';
+      try{
+        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+        if(error) throw error;
+        adminLogin.style.display='none';
+        adminLogout.style.display='inline-block';
+        sessionInfo.textContent = `Signed in as ${data.user?.email||''}`;
+        setAdminUIEnabled(isWhitelistedAdminEmail(data.user?.email));
+      }catch(ex){ sessionInfo.textContent = ex?.message||'Login failed'; }
+    });
+    adminLogout?.addEventListener('click', async ()=>{ await sb.auth.signOut(); adminLogin.style.display='inline-block'; adminLogout.style.display='none'; sessionInfo.textContent = 'Signed out'; setAdminUIEnabled(false); });
+    // Load current session on boot
+    try{
+      const { data } = await sb.auth.getUser();
+      if(data?.user){
+        adminLogin.style.display='none';
+        adminLogout.style.display='inline-block';
+        sessionInfo.textContent = `Signed in as ${data.user.email}`;
+        setAdminUIEnabled(isWhitelistedAdminEmail(data.user.email));
+      } else {
+        setAdminUIEnabled(false);
+      }
+    }catch{ setAdminUIEnabled(false); }
+
+    // Service key
+    const serviceStatus = $('#serviceStatus');
+    $('#setServiceKey')?.addEventListener('click', ()=>{
+      try{
+        const key = $('#serviceKey').value.trim();
+        if(!key){ serviceStatus.textContent = 'Not set'; adminSb = null; return; }
+        adminSb = createClient(SB_URL, key);
+        serviceStatus.textContent = 'Service key set';
+        // Service Role does NOT grant UI access by itself; still require admin email
+        (async ()=>{
+          try{ const { data } = await sb.auth.getUser(); setAdminUIEnabled(data?.user && isWhitelistedAdminEmail(data.user.email)); }catch{ setAdminUIEnabled(false); }
+        })();
+      }catch{ serviceStatus.textContent = 'Failed to set key'; }
+    });
+
+    // Create user via Admin API
+    $('#createUser')?.addEventListener('click', async ()=>{
+      const msg = $('#createUserMsg'); msg.textContent='';
+      if(!adminSb){ msg.textContent = 'Service Role Key required.'; return; }
+      const email = $('#newEmail').value.trim();
+      const password = $('#newPassword').value;
+      const username = $('#newUsername').value.trim();
+      if(!email || !password){ msg.textContent = 'Email and password are required'; return; }
+      try{
+        const { data, error } = await adminSb.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { username } });
+        if(error) throw error;
+        const uid = data.user?.id;
+        if(uid){
+          try{ await adminSb.from('profiles').upsert({ id: uid, email, username }); }catch{}
+        }
+        msg.textContent = `Created user ${email} (${uid||'no-id'})`;
+        await loadUsers();
+      }catch(ex){ msg.textContent = ex?.message || 'Create failed'; }
+    });
+
+    // Users list
+    async function fetchUsers(){
+      // Guard: require admin access
+      const { data } = await sb.auth.getUser();
+      const allow = (data?.user && isWhitelistedAdminEmail(data.user.email));
+      if(!allow) throw new Error('Not authorized');
+      const q = $('#userSearch').value.trim().toLowerCase();
+      let { data: rows } = await sb.from('profiles').select('id, email, username').order('created_at', { ascending: false }).limit(200);
+      rows = rows||[];
+      if(q){ rows = rows.filter(r=> (r.email||'').toLowerCase().includes(q) || (r.username||'').toLowerCase().includes(q)); }
+      return rows;
+    }
+
+    async function loadUsers(){
+      const tbody = $('#usersTbody'); tbody.innerHTML = '<tr><td colspan="4" class="muted-sm">Loading…</td></tr>';
+      try{
+        const rows = await fetchUsers();
+        if(!rows.length){ tbody.innerHTML = '<tr><td colspan="4" class="muted-sm">No users</td></tr>'; return; }
+        tbody.innerHTML = rows.map(r=>{
+          const id = r.id; const email = r.email||''; const uname = r.username||'';
+          return `<tr>
+            <td class="nowrap">${id.slice(0,8)}…</td>
+            <td>${email}</td>
+            <td>${uname}</td>
+            <td class="row-actions">
+              <button class="btn" data-del-posts="${id}">Delete posts</button>
+              <button class="btn" data-del-profile="${id}">Delete profile</button>
+              <button class="btn danger" data-del-auth="${id}" ${adminSb?'':'disabled'}>Delete Auth user</button>
+            </td>
+          </tr>`;
+        }).join('');
+      }catch{ tbody.innerHTML = '<tr><td colspan="4" class="muted-sm">Failed to load users</td></tr>'; }
+    }
+
+  $('#reloadUsers')?.addEventListener('click', loadUsers);
+    $('#userSearch')?.addEventListener('input', ()=>{ loadUsers(); });
+    await loadUsers();
+
+    // Row actions
+    document.body.addEventListener('click', async (e)=>{
+      const delPostsBtn = e.target.closest('[data-del-posts]');
+      const delProfileBtn = e.target.closest('[data-del-profile]');
+      const delAuthBtn = e.target.closest('[data-del-auth]');
+      if(delPostsBtn){
+        // Guard
+        try{
+          const { data } = await sb.auth.getUser();
+          const allow = (data?.user && isWhitelistedAdminEmail(data.user.email));
+          if(!allow) return alert('Not authorized');
+        }catch{ return alert('Not authorized'); }
+        const uid = delPostsBtn.getAttribute('data-del-posts');
+        const ok = confirm(`Delete ALL posts for user ${uid.slice(0,8)}… ?`); if(!ok) return;
+        try{ const cli = adminSb || sb; const { error } = await cli.from('posts').delete().eq('user_id', uid); if(error) throw error; alert('Posts deleted (subject to RLS).'); }catch(ex){ alert('Failed to delete posts: ' + (ex?.message||'')); }
+        await loadUsers();
+      }
+      if(delProfileBtn){
+        // Guard
+        try{
+          const { data } = await sb.auth.getUser();
+          const allow = (data?.user && isWhitelistedAdminEmail(data.user.email));
+          if(!allow) return alert('Not authorized');
+        }catch{ return alert('Not authorized'); }
+        const uid = delProfileBtn.getAttribute('data-del-profile');
+        const ok = confirm(`Delete profile row for ${uid.slice(0,8)}… ?`); if(!ok) return;
+        try{ const cli = adminSb || sb; const { error } = await cli.from('profiles').delete().eq('id', uid); if(error) throw error; alert('Profile deleted.'); }catch(ex){ alert('Failed to delete profile: ' + (ex?.message||'')); }
+        await loadUsers();
+      }
+      if(delAuthBtn){
+        // Guard: require both service role and admin email
+        try{
+          const { data } = await sb.auth.getUser();
+          const allow = isServiceRole() && (data?.user && isWhitelistedAdminEmail(data.user.email));
+          if(!allow) return alert('Service Role and admin email required');
+        }catch{ return alert('Service Role and admin email required'); }
+        const uid = delAuthBtn.getAttribute('data-del-auth');
+        if(!adminSb){ alert('Service Role Key required.'); return; }
+        const ok = confirm(`Permanently delete Auth user ${uid.slice(0,8)}… ? This cannot be undone.`); if(!ok) return;
+        try{ const { error } = await adminSb.auth.admin.deleteUser(uid); if(error) throw error; alert('Auth user deleted.'); }catch(ex){ alert('Failed to delete Auth user: ' + (ex?.message||'')); }
+        await loadUsers();
+      }
+    });
+
+    // Initial UI gate: hide admin sections until authorized
+    setAdminUIEnabled(false);
+  </script>
+</body>
+</html>
