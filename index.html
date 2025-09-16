@@ -7,13 +7,25 @@
   <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycHN5c21neWhuanB6dGdlcnZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NTcwMTgsImV4cCI6MjA3MzQzMzAxOH0.sLFqsvbQSXdtzgvH-bMsTuItL8K_FMUl0_Y4gtG7iXQ" />
   <meta name="pocketbase-url" content="https://web-production-1f8b.up.railway.app" />
   <meta http-equiv="x-ua-compatible" content="ie=edge" />
-  <title>Team 1nf1n1ty</title>
-  <meta name="description" content="SastraDaily — a fast, modern social app (local-first demo)" />
+  <title>Team 1nf1n1ty Social Media App</title>
+  <meta name="description" content="Team 1nf1n1ty Social Media App — a fast, modern social app" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./styles.css" />
-  <link rel="icon" href="./assets/1nf1n1ty.webp?v=1" type="image/webp" />
+  <link rel="icon" href="./assets/1nf1n1ty.webp?v=1" type="image/webp" title="Team 1nf1n1ty" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Team 1nf1n1ty Social Media App" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:title" content="Team 1nf1n1ty Social Media App" />
+  <meta property="og:description" content="Team 1nf1n1ty Social Media App — a fast, modern social app" />
+  <meta property="og:image" content="./assets/1nf1n1ty.webp?v=1" />
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Team 1nf1n1ty Social Media App" />
+  <meta name="twitter:description" content="Team 1nf1n1ty Social Media App — a fast, modern social app" />
+  <meta name="twitter:image" content="./assets/1nf1n1ty.webp?v=1" />
 </head>
 <body>
   <noscript>This app requires JavaScript enabled.</noscript>
@@ -67,7 +79,7 @@
     <!-- Auth Modal -->
     <dialog id="authModal">
       <form method="dialog" id="authForm" class="card">
-        <h2>Welcome to SastraDaily</h2>
+  <h2>Welcome to Team 1nf1n1ty Social Media App</h2>
         <p class="muted">Login or sign up to continue</p>
         <label>
           <span>Email</span>
@@ -208,8 +220,14 @@
       }
     });
 
-    // If already authed, go straight to feed
-    try { const { data } = await sb.auth.getUser(); if (data?.user) location.href = './feed.html'; } catch {}
+    // If already authed, go straight to feed (and stamp login time for unread baseline)
+    try {
+      const { data } = await sb.auth.getUser();
+      if (data?.user) {
+        try{ localStorage.setItem(`sd_chat_login_at:${data.user.id}`, new Date().toISOString()); }catch{}
+        location.href = './feed.html';
+      }
+    } catch {}
   </script>
 </body>
 </html>

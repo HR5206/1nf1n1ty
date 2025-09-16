@@ -5,27 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="supabase-url" content="https://xrpsysmgyhnjpztgervr.supabase.co" />
   <meta name="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycHN5c21neWhuanB6dGdlcnZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4NTcwMTgsImV4cCI6MjA3MzQzMzAxOH0.sLFqsvbQSXdtzgvH-bMsTuItL8K_FMUl0_Y4gtG7iXQ" />
-  <title>Chat</title>
+  <title>Chat — Team 1nf1n1ty</title>
+  <meta name="description" content="Team 1nf1n1ty Social Media App — a fast, modern social app" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
   <script>try{ const t=localStorage.getItem('sd_theme'); if(!t||t==='dark'){ document.documentElement.classList.add('dark'); } }catch{}</script>
   <link rel="stylesheet" href="./styles.css" />
-  <link rel="icon" href="./assets/1nf1n1ty.webp?v=1" type="image/webp" />
+  <link rel="icon" href="./assets/1nf1n1ty.webp?v=1" type="image/webp" title="Team 1nf1n1ty" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Team 1nf1n1ty Social Media App" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:title" content="Chat — Team 1nf1n1ty" />
+  <meta property="og:description" content="Team 1nf1n1ty Social Media App — a fast, modern social app" />
+  <meta property="og:image" content="./assets/1nf1n1ty.webp?v=1" />
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Chat — Team 1nf1n1ty" />
+  <meta name="twitter:description" content="Team 1nf1n1ty Social Media App — a fast, modern social app" />
+  <meta name="twitter:image" content="./assets/1nf1n1ty.webp?v=1" />
 </head>
 <body>
   <header class="app-header">
   <div class="brand"><a href="./logo-redirect.html" aria-label="Team 1nf1n1ty homepage"><img id="siteLogo" class="site-logo" src="./assets/1nf1n1ty.webp" alt="Logo" /></a></div>
-    <nav id="siteNav" class="nav" role="navigation">
+    <nav class="nav">
       <a class="nav-btn" href="./feed.html">Feed</a>
       <a class="nav-btn" href="./profile.html">Profile</a>
-      <a class="nav-btn" href="./chat.html" aria-current="page">Chat</a>
+      <a class="nav-btn" href="./chat.html">Chat</a>
     </nav>
-    <div class="actions">
-      <button id="navToggle" class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="siteNav">☰</button>
-      <button id="themeToggle" title="Toggle theme" class="btn">🌓</button>
-      <div id="authActions"><button id="loginBtn" class="btn gradient" onclick="location.href='./index.html'">Login</button><button id="logoutBtn" class="btn" hidden>Logout</button></div>
-    </div>
+    <div class="actions"><button id="themeToggle" title="Toggle theme" class="btn">🌓</button><div id="authActions"><button id="loginBtn" class="btn gradient" onclick="location.href='./index.html'">Login</button><button id="logoutBtn" class="btn" hidden>Logout</button></div></div>
   </header>
   <main id="app" class="app-root">
     <div class="chat-layout">

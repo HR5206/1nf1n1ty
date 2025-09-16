@@ -26,10 +26,19 @@ let lastRead = {};
 try{ lastRead = JSON.parse(localStorage.getItem(LAST_READ_KEY)||'{}'); }catch{ lastRead = {}; }
 const unreadCounts = Object.create(null); // { [peerId]: number }
 function saveLastRead(){ try{ localStorage.setItem(LAST_READ_KEY, JSON.stringify(lastRead||{})); }catch{} }
+
+// Baseline login timestamp to avoid showing old messages as unread after a fresh login on this device
+const LOGIN_AT_KEY = me ? `sd_chat_login_at:${me.id}` : 'sd_chat_login_at';
+let loginAt = null;
+try{ loginAt = localStorage.getItem(LOGIN_AT_KEY) || null; }catch{ loginAt = null; }
+if(!loginAt){
+  try{ loginAt = new Date().toISOString(); localStorage.setItem(LOGIN_AT_KEY, loginAt); }catch{ loginAt = new Date().toISOString(); }
+}
 function markConversationRead(peerId, ts){ if(!peerId) return; lastRead[peerId] = ts || new Date().toISOString(); saveLastRead(); unreadCounts[peerId]=0; renderAllUsers(allUsersCache); }
 async function recomputeUnreadForPeer(peerId){
   if(!peerId || !me) return 0;
-  const since = lastRead[peerId] || '1970-01-01T00:00:00.000Z';
+  // If no explicit last-read for this peer on this device, use the login baseline
+  const since = lastRead[peerId] || loginAt || '1970-01-01T00:00:00.000Z';
   try{
     const { count } = await sb
       .from('messages')
@@ -219,7 +228,7 @@ function subscribeChat(){
     const { data: msgs } = await sb.from('messages').select('id, text, sender, receiver, created_at').eq('room', room).order('created_at', { ascending: true });
     chatList.innerHTML = (msgs||[]).map(m=>{
       const own = m.sender===me.id;
-      const text = escapeHTML(m.text||'');
+      const text = m.text||'';
       const delBtn = own ? '<button class="msg-del" title="Delete" aria-label="Delete message">🗑</button>' : '';
       return `<li class="message ${own?'out':'in'}" data-id="${m.id}">${text}${delBtn}</li>`;
     }).join('');

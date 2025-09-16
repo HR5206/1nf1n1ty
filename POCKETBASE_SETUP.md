@@ -1,4 +1,4 @@
-# SastraDaily — PocketBase (Free, self‑hosted) Setup
+# Team 1nf1n1ty Social Media App — PocketBase (Free, self‑hosted) Setup
 
 PocketBase gives you a zero-dependency backend (SQLite + REST/Realtime) that you can run locally or deploy for free. We’ll wire auth, posts, comments, likes, profile, and chat with realtime subscriptions.
 
@@ -100,7 +100,7 @@ Notes:
   ```
   and then: `const pb = new window.PocketBase('http://127.0.0.1:8090')`. This is NOT needed here.
 
-## 5) Point SastraDaily to PocketBase
+## 5) Point Team 1nf1n1ty Social Media App to PocketBase
 - Start PocketBase server on http://127.0.0.1:8090
 - Create a few test users from the Admin UI (or sign up from the app)
 - Switch `index.html` to use `script.pocketbase.js` (see below)

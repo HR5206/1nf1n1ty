@@ -1,4 +1,4 @@
-// SastraDaily — PocketBase Edition (Auth + Collections + Realtime)
+// Team 1nf1n1ty Social Media App — PocketBase Edition (Auth + Collections + Realtime)
 // Run PocketBase at http://127.0.0.1:8090 and switch index.html to this file.
 
 import PocketBase from 'https://unpkg.com/pocketbase@0.22.21/dist/pocketbase.es.mjs';

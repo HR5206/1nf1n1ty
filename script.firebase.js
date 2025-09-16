@@ -1,4 +1,4 @@
-// SastraDaily — Firebase Edition (Auth + Firestore + Storage)
+// Team 1nf1n1ty Social Media App — Firebase Edition (Auth + Firestore + Storage)
 // Switch to this file in index.html once you complete the Firebase setup.
 
 // Imports (Firebase v10 modular via ESM CDN)
