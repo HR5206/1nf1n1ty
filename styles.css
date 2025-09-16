@@ -206,6 +206,7 @@ html.dark .auth-brand span{ color: #fff; }
 	--pill-border: rgba(0,0,0,.1);
 	--post-height: 560px;
 	--post-media-height: 260px;
+	--meta-row-h: 36px; /* reserved height for likes/comments row */
 }
 
 .dropzone .dz-remove{
@@ -380,6 +381,8 @@ html.dark .nav-btn:hover{
 	gap: 12px;
 	align-items: center;
 }
+/* Reserve space for auth buttons to avoid header reflow */
+#authActions[style*="visibility:hidden"] { visibility: hidden; }
 /* Theme toggle as circular control with adaptive ring */
 #themeToggle{
 	width: 44px;
@@ -559,6 +562,7 @@ a:hover {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 	gap: 16px;
+	align-items: stretch; /* ensure cards in a row share the tallest height */
 }
 .post {
 	background: var(--card);
@@ -568,6 +572,7 @@ a:hover {
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
+	height: 100%; /* fill the grid track height */
 }
 .post:hover {
 	transform: translateY(-4px);
@@ -656,6 +661,8 @@ html.dark .post .actions .btn.active{
 	font-weight: 600;
 }
 .likes-row{ display:flex; align-items: baseline; justify-content: space-between; padding: 0 16px 10px; gap: 12px; }
+.likes-row{ min-height: var(--meta-row-h); } /* reserve space so captions align across posts */
+.likes-row .comments-count{ white-space: nowrap; } /* avoid height growth from wrapping */
 .likes-row .likes{ padding: 0; margin: 0; }
 .likes-row .likes, .likes-row .comments-count{
 	color: #d70b4d;
@@ -702,13 +709,18 @@ html.dark .comments .btn:hover{ background:#d70b4d; color:#ffffff; box-shadow: 0
 	gap: 12px;
 	padding: 14px 16px;
 	border-top: 1px solid var(--border);
+	align-items: center; /* vertically center input and button */
+	margin-top: auto; /* stick to bottom of the card so all posts align */
 }
 /* White rounded comment input with subtle border/shadow and brand focus */
 .comment-input input{
 	flex: 1;
 	background: #ffffff;
 	color: #181824;
-	padding: 12px 14px;
+	height: 44px;             /* consistent height */
+	padding: 0 14px;          /* vertical center without extra height */
+	display: inline-flex;     /* match dark theme behavior */
+	align-items: center;      /* center text vertically */
 	border-radius: 12px;
 	border: 1.5px solid #e6e6ef;
 	outline: none;
@@ -717,18 +729,17 @@ html.dark .comments .btn:hover{ background:#d70b4d; color:#ffffff; box-shadow: 0
 	min-width: 0; /* prevent overflow in flex row */
 }
 .comment-input input::placeholder{ color: #9aa1af; opacity: 1; }
-.comment-input input:focus{
-	border-color: #d70b4d;
-	box-shadow: 0 0 0 3px rgba(215,11,77,0.20), 0 2px 8px rgba(0,0,0,0.08);
-	transform: translateY(-1px);
-}
+/* no-op */
 .comment-input .btn{
 	background: #ffffff;
 	color: #d70b4d;
 	border: 2px solid #d70b4d;
 	border-radius: 999px;
 	box-shadow: 0 4px 10px rgba(215,11,77,0.15);
-	height: 44px;
+	height: 44px;             /* match input height */
+	display: inline-flex;     /* center label */
+	align-items: center;
+	justify-content: center;
 	font-weight: 600;
 }
 .comment-input .btn:hover{ background: #d70b4d; color: #ffffff; box-shadow: 0 6px 16px rgba(215,11,77,0.28); }
@@ -738,7 +749,7 @@ html.dark .comment-input input{
 	color: #ffffff;
 	border: 1px solid #35355a;
 	height: 44px;
-	padding: 0 16px;
+	padding: 0 16px;          /* keep slightly wider padding in dark theme */
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -1090,8 +1101,9 @@ progress {
 	/* Mobile header: keep actions visible, move nav below */
 	.app-header{
 		flex-wrap: wrap;
-		padding: 12px 14px;
-		gap: 8px 12px;
+		padding: 14px 14px;
+		gap: 8px 12px; /* col-gap 12px; we'll enlarge only the row gap below */
+		row-gap: 14px; /* add comfy vertical space between rows */
 	}
 	.site-logo{ height: 42px; max-height: 42px; }
 	.actions{ margin-left: auto; }
@@ -1103,6 +1115,7 @@ progress {
 		justify-content: center;
 		flex-wrap: wrap;
 		gap: 8px;
+		margin-top: 2px; /* subtle breathing room below actions */
 	}
 	.nav .nav-btn{ padding: 8px 12px; }
 	/* Slightly tighter auth buttons so Logout fits */
