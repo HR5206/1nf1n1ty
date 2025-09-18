@@ -310,6 +310,14 @@ html.dark .app-header{
 	gap: 12px;
 	font-weight: 600;
 }
+/* Small wordmark to the right of the header logo */
+.brand .brand-title{
+	font-size: 0.9rem;
+	font-weight: 600;
+	letter-spacing: 0.2px;
+	color: var(--primary);
+	white-space: nowrap;
+}
 /* Placeholder img for site logo; keeps header height consistent */
 .site-logo{
 	display: block;
